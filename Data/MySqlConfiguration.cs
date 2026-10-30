@@ -183,18 +183,18 @@ public sealed class EntityWriteInterceptor : SaveChangesInterceptor
     {
         switch (entry.Entity)
         {
-            case UserDB user:
+            case User user:
                 user.FullName = user.FullName.Trim();
                 user.Email = user.Email.Trim().ToLowerInvariant();
                 user.PhoneNumber = BlankToNull(user.PhoneNumber);
                 user.GitHubUserName = BlankToNull(user.GitHubUserName);
                 break;
-            case ProjectsDB project:
+            case Projects project:
                 project.ProjectName = project.ProjectName.Trim();
                 project.GitHubOwner = BlankToNull(project.GitHubOwner);
                 project.GitHubRepoName = BlankToNull(project.GitHubRepoName);
                 break;
-            case TasksDB task:
+            case Tasks task:
                 task.Title = task.Title.Trim();
                 task.GitHubPRStatus = BlankToNull(task.GitHubPRStatus);
                 task.GitHubPRUrl = BlankToNull(task.GitHubPRUrl);

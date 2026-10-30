@@ -27,14 +27,14 @@ public class MySqlDbContext : MyDbContext
 
     private static void ConfigureRoles(ModelBuilder modelBuilder)
     {
-        var entity = modelBuilder.Entity<RoleDB>();
+        var entity = modelBuilder.Entity<Role>();
         entity.Property(role => role.RoleName).HasMaxLength(50).IsRequired();
         entity.HasIndex(role => role.RoleName)
             .IsUnique()
             .HasDatabaseName("UX_Roles_RoleName");
         entity.ToTable(table => table.HasCheckConstraint(
             "CK_Roles_RoleName",
-            OneOf(nameof(RoleDB.RoleName), [UserRoles.Admin, UserRoles.Manager, UserRoles.Developer])));
+            OneOf(nameof(Role.RoleName), [UserRoles.Admin, UserRoles.Manager, UserRoles.Developer])));
         entity.HasData(
             new { RoleId = UserRoles.AdminId, RoleName = UserRoles.Admin },
             new { RoleId = UserRoles.ManagerId, RoleName = UserRoles.Manager },
@@ -43,7 +43,7 @@ public class MySqlDbContext : MyDbContext
 
     private static void ConfigureUsers(ModelBuilder modelBuilder)
     {
-        var entity = modelBuilder.Entity<UserDB>();
+        var entity = modelBuilder.Entity<User>();
         entity.HasQueryFilter(user => !user.IsDeleted);
         entity.Property(user => user.FullName).HasMaxLength(120).IsRequired();
         entity.Property(user => user.Email)
@@ -68,13 +68,13 @@ public class MySqlDbContext : MyDbContext
             "CK_Users_ManagerNotSelf",
             "`ManagerId` IS NULL OR `ManagerId` <> `UserID`"));
 
-        entity.HasOne<RoleDB>().WithMany().HasForeignKey(user => user.RoleId).OnDelete(DeleteBehavior.Restrict);
-        entity.HasOne<UserDB>().WithMany().HasForeignKey(user => user.ManagerId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<Role>().WithMany().HasForeignKey(user => user.RoleId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<User>().WithMany().HasForeignKey(user => user.ManagerId).OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureProjects(ModelBuilder modelBuilder)
     {
-        var entity = modelBuilder.Entity<ProjectsDB>();
+        var entity = modelBuilder.Entity<Projects>();
         entity.HasQueryFilter(project => !project.IsDeleted);
         entity.Property(project => project.ProjectName).HasMaxLength(150).IsRequired();
         entity.Property(project => project.Description).HasMaxLength(4000).IsRequired().HasDefaultValue(string.Empty);
@@ -88,16 +88,17 @@ public class MySqlDbContext : MyDbContext
         entity.HasIndex(project => new { project.IsDeleted, project.Status, project.CreatedAt }).HasDatabaseName("IX_Projects_Status_CreatedAt");
         entity.HasIndex(project => new { project.GitHubOwner, project.GitHubRepoName }).IsUnique().HasDatabaseName("UX_Projects_GitHubRepo");
 
+        var projectStatus = entity.Property(project => project.Status).Metadata.Name;
         entity.ToTable(table => table.HasCheckConstraint(
             "CK_Projects_Status",
-            OneOf(nameof(ProjectsDB.Status), ProjectStatuses.All)));
+            OneOf(projectStatus, ProjectStatuses.All)));
 
-        entity.HasOne<UserDB>().WithMany().HasForeignKey(project => project.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<User>().WithMany().HasForeignKey(project => project.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureTasks(ModelBuilder modelBuilder)
     {
-        var entity = modelBuilder.Entity<TasksDB>();
+        var entity = modelBuilder.Entity<Tasks>();
         entity.HasQueryFilter(task => !task.IsDeleted);
         entity.Property(task => task.Title).HasMaxLength(200).IsRequired();
         entity.Property(task => task.TaskSummery).HasMaxLength(4000);
@@ -115,24 +116,27 @@ public class MySqlDbContext : MyDbContext
         entity.HasIndex(task => new { task.ProjectId, task.CreatedAt }).HasDatabaseName("IX_Tasks_Project_Created");
         entity.HasIndex(task => new { task.ProjectId, task.GitHubPRNumber }).IsUnique().HasDatabaseName("UX_Tasks_Project_PullRequest");
 
+        var taskStatus = entity.Property(task => task.Status).Metadata.Name;
+        var taskPriority = entity.Property(task => task.Priority).Metadata.Name;
+        var pullRequestStatus = entity.Property(task => task.GitHubPRStatus).Metadata.Name;
         entity.ToTable(table =>
         {
-            table.HasCheckConstraint("CK_Tasks_Status", OneOf(nameof(TasksDB.Status), TaskStatuses.All));
-            table.HasCheckConstraint("CK_Tasks_Priority", OneOf(nameof(TasksDB.Priority), TaskPriorities.All));
-            table.HasCheckConstraint("CK_Tasks_GitHubPRStatus", OneOf(nameof(TasksDB.GitHubPRStatus), PullRequestStatuses.All, allowNull: true));
+            table.HasCheckConstraint("CK_Tasks_Status", OneOf(taskStatus, TaskStatuses.All));
+            table.HasCheckConstraint("CK_Tasks_Priority", OneOf(taskPriority, TaskPriorities.All));
+            table.HasCheckConstraint("CK_Tasks_GitHubPRStatus", OneOf(pullRequestStatus, PullRequestStatuses.All, allowNull: true));
         });
 
-        entity.HasOne<ProjectsDB>().WithMany().HasForeignKey(task => task.ProjectId).OnDelete(DeleteBehavior.Cascade);
-        entity.HasOne<UserDB>().WithMany().HasForeignKey(task => task.AssignedToUserId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<Projects>().WithMany().HasForeignKey(task => task.ProjectId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<User>().WithMany().HasForeignKey(task => task.AssignedToUserId).OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureProjectMembers(ModelBuilder modelBuilder)
     {
-        var entity = modelBuilder.Entity<ProjectMemberDB>();
+        var entity = modelBuilder.Entity<ProjectMember>();
         entity.HasIndex(member => new { member.ProjectId, member.UserId }).IsUnique().HasDatabaseName("UX_ProjectMembers_Project_User");
         entity.HasIndex(member => new { member.UserId, member.ProjectId }).HasDatabaseName("IX_ProjectMembers_User_Project");
-        entity.HasOne<ProjectsDB>().WithMany().HasForeignKey(member => member.ProjectId).OnDelete(DeleteBehavior.Cascade);
-        entity.HasOne<UserDB>().WithMany().HasForeignKey(member => member.UserId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<Projects>().WithMany().HasForeignKey(member => member.ProjectId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<User>().WithMany().HasForeignKey(member => member.UserId).OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureAuditColumns(ModelBuilder modelBuilder)

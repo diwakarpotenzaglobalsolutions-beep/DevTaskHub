@@ -3,7 +3,7 @@ using DevTaskHubBackend.Data;
 
 namespace DevTaskHubBackend.Entities;
 
-public class TasksDB : BaseEntity
+public class Tasks : BaseEntity
 {
     [Key]
     public Guid TaskId { get; set; }

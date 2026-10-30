@@ -10,13 +10,13 @@ public class MyDbContext:DbContext
 
         protected MyDbContext(DbContextOptions options):base(options){}
 
-        public DbSet<RoleDB> Roles{set;get;}
+        public DbSet<Role> Roles{set;get;}
 
-        public DbSet<UserDB> Users{set;get;}
+        public DbSet<User> Users{set;get;}
 
-        public DbSet<ProjectsDB> Projects {set;get;}
+        public DbSet<Projects> Projects {set;get;}
 
-        public DbSet<TasksDB> Tasks{set;get;}
+        public DbSet<Tasks> Tasks{set;get;}
 
-        public DbSet<ProjectMemberDB> ProjectMembers { get; set; }
+        public DbSet<ProjectMember> ProjectMembers { get; set; }
 }

@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace DevTaskHubBackend.Entities;
 
-public class UserDB : BaseEntity
+public class User : BaseEntity
 {
     [Key]
     public Guid UserID { get; set; }
