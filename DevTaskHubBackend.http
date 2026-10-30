@@ -1,0 +1,6 @@
+@DevTaskHubBackend_HostAddress = http://localhost:5187
+
+GET {{DevTaskHubBackend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
