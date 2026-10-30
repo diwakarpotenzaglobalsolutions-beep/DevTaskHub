@@ -144,11 +144,11 @@ public class AuthServices : IAuthServices
         var user=await _context.Users.FirstOrDefaultAsync(u=>u.Email==loginDto.Email);
         if (user == null)
         {
-             throw new AppException(StatusCodes.Status404NotFound, "Email is worng");
+             throw new AppException(StatusCodes.Status404NotFound, "No account found with this email address.");
         }
         if(new PasswordHasher<User>().VerifyHashedPassword(user,user.PasswordHash,loginDto.Password)==PasswordVerificationResult.Failed)
         {
-            throw new AppException(StatusCodes.Status404NotFound, "Password is not worng");
+            throw new AppException(StatusCodes.Status404NotFound, "The password you entered is incorrect.");
         }
 
 
