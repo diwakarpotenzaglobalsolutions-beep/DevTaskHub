@@ -11,7 +11,7 @@ public class User : BaseEntity
 
     public string Email { get; set; } = string.Empty;
 
-    public string? PhoneNumber { get; set; }
+    public string PhoneNumber { get; set; }= string.Empty;
 
     public string PasswordHash { get; set; } = string.Empty;
 
@@ -26,4 +26,8 @@ public class User : BaseEntity
     public bool IsDeleted { get; set; }
 
     public uint RowVersion { get; set; }
+
+      public string RefreshToken { get; set; }=string.Empty;
+
+  public DateTime RefreshTokenExpiry {get;set;} = DateTime.UtcNow;
 }

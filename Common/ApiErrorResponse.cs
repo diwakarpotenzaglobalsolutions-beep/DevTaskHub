@@ -8,7 +8,8 @@ public sealed class ApiErrorResponse
 
     public string Message { get; init; } = string.Empty;
 
-    public string TraceId { get; init; } = string.Empty;
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public object? Data { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyDictionary<string, string[]>? Errors { get; init; }

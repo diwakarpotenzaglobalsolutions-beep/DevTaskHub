@@ -65,13 +65,18 @@ public static class MySqlConfiguration
                 "environment variable, to a complete connection string including Password.");
         }
 
+        if (connectionString.IndexOf("SslMode", StringComparison.OrdinalIgnoreCase) < 0)
+        {
+            builder.SslMode = MySqlSslMode.Disabled;
+        }
+
         builder.Pooling = true;
         builder.MinimumPoolSize = (uint)settings.MinPoolSize;
         builder.MaximumPoolSize = (uint)settings.MaxPoolSize;
         builder.ConnectionLifeTime = (uint)settings.ConnectionLifetimeSeconds;
         builder.ConnectionTimeout = (uint)settings.ConnectionTimeoutSeconds;
         builder.DefaultCommandTimeout = (uint)settings.CommandTimeoutSeconds;
-        builder.ConnectionReset = true;
+        builder.ConnectionReset = false;
         builder.AllowUserVariables = true;
         builder.UseAffectedRows = true;
         return builder.ConnectionString;
