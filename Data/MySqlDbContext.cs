@@ -34,11 +34,11 @@ public class MySqlDbContext : MyDbContext
             .HasDatabaseName("UX_Roles_RoleName");
         entity.ToTable(table => table.HasCheckConstraint(
             "CK_Roles_RoleName",
-            OneOf(nameof(Role.RoleName), [UserRoles.Admin, UserRoles.Manager, UserRoles.Developer])));
+            OneOf(nameof(Role.RoleName), UserRoles.All)));
         entity.HasData(
-            new { RoleId = UserRoles.AdminId, RoleName = UserRoles.Admin },
-            new { RoleId = UserRoles.ManagerId, RoleName = UserRoles.Manager },
-            new { RoleId = UserRoles.DeveloperId, RoleName = UserRoles.Developer });
+            new { RoleId = UserRole.Admin.ToId(), RoleName = UserRole.Admin.ToName() },
+            new { RoleId = UserRole.Manager.ToId(), RoleName = UserRole.Manager.ToName() },
+            new { RoleId = UserRole.Developer.ToId(), RoleName = UserRole.Developer.ToName() });
     }
 
     private static void ConfigureUsers(ModelBuilder modelBuilder)
@@ -78,7 +78,7 @@ public class MySqlDbContext : MyDbContext
         entity.HasQueryFilter(project => !project.IsDeleted);
         entity.Property(project => project.ProjectName).HasMaxLength(150).IsRequired();
         entity.Property(project => project.Description).HasMaxLength(4000).IsRequired().HasDefaultValue(string.Empty);
-        entity.Property(project => project.Status).HasMaxLength(20).IsRequired().HasDefaultValue(ProjectStatuses.Active);
+        entity.Property(project => project.Status).HasMaxLength(20).IsRequired().HasDefaultValue(nameof(ProjectStatus.Active));
         entity.Property(project => project.GitHubOwner).HasMaxLength(39);
         entity.Property(project => project.GitHubRepoName).HasMaxLength(100);
         entity.Property(project => project.IsDeleted).HasDefaultValue(false);
@@ -91,7 +91,7 @@ public class MySqlDbContext : MyDbContext
         var projectStatus = entity.Property(project => project.Status).Metadata.Name;
         entity.ToTable(table => table.HasCheckConstraint(
             "CK_Projects_Status",
-            OneOf(projectStatus, ProjectStatuses.All)));
+            OneOf(projectStatus, Enum.GetNames<ProjectStatus>())));
 
         entity.HasOne<User>().WithMany().HasForeignKey(project => project.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
     }
@@ -102,8 +102,8 @@ public class MySqlDbContext : MyDbContext
         entity.HasQueryFilter(task => !task.IsDeleted);
         entity.Property(task => task.Title).HasMaxLength(200).IsRequired();
         entity.Property(task => task.TaskSummery).HasMaxLength(4000);
-        entity.Property(task => task.Status).HasMaxLength(20).IsRequired().HasDefaultValue(TaskStatuses.ToDo);
-        entity.Property(task => task.Priority).HasMaxLength(20).IsRequired().HasDefaultValue(TaskPriorities.Medium);
+        entity.Property(task => task.Status).HasMaxLength(20).IsRequired().HasDefaultValue(nameof(TaskStatus.ToDo));
+        entity.Property(task => task.Priority).HasMaxLength(20).IsRequired().HasDefaultValue(nameof(TaskPriority.Medium));
         entity.Property(task => task.GitHubPRStatus).HasMaxLength(20);
         entity.Property(task => task.GitHubPRUrl).HasMaxLength(500);
         entity.Property(task => task.IsDeleted).HasDefaultValue(false);
@@ -121,9 +121,9 @@ public class MySqlDbContext : MyDbContext
         var pullRequestStatus = entity.Property(task => task.GitHubPRStatus).Metadata.Name;
         entity.ToTable(table =>
         {
-            table.HasCheckConstraint("CK_Tasks_Status", OneOf(taskStatus, TaskStatuses.All));
-            table.HasCheckConstraint("CK_Tasks_Priority", OneOf(taskPriority, TaskPriorities.All));
-            table.HasCheckConstraint("CK_Tasks_GitHubPRStatus", OneOf(pullRequestStatus, PullRequestStatuses.All, allowNull: true));
+            table.HasCheckConstraint("CK_Tasks_Status", OneOf(taskStatus, Enum.GetNames<TaskStatus>()));
+            table.HasCheckConstraint("CK_Tasks_Priority", OneOf(taskPriority, Enum.GetNames<TaskPriority>()));
+            table.HasCheckConstraint("CK_Tasks_GitHubPRStatus", OneOf(pullRequestStatus, Enum.GetNames<PullRequestStatus>(), allowNull: true));
         });
 
         entity.HasOne<Projects>().WithMany().HasForeignKey(task => task.ProjectId).OnDelete(DeleteBehavior.Cascade);
