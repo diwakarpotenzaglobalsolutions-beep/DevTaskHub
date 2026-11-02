@@ -191,7 +191,7 @@ public sealed class EntityWriteInterceptor : SaveChangesInterceptor
             case User user:
                 user.FullName = user.FullName.Trim();
                 user.Email = user.Email.Trim().ToLowerInvariant();
-                user.PhoneNumber = BlankToNull(user.PhoneNumber);
+                user.PhoneNumber = BlankToNull(user.PhoneNumber) ?? string.Empty;
                 user.GitHubUserName = BlankToNull(user.GitHubUserName);
                 break;
             case Projects project:
