@@ -3,7 +3,7 @@ using DevTaskHubBackend.Data;
 
 namespace DevTaskHubBackend.Entities;
 
-public class ProjectsDB : BaseEntity
+public class Projects : BaseEntity
 {
     [Key]
     public Guid ProjectId { get; set; }
@@ -12,7 +12,7 @@ public class ProjectsDB : BaseEntity
 
     public string Description { get; set; } = string.Empty;
 
-    public string Status { get; set; } = ProjectStatuses.Active;
+    public string Status { get; set; } = nameof(ProjectStatus.Active);
 
     public Guid CreatedByUserId { get; set; }
 

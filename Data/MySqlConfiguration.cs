@@ -65,13 +65,18 @@ public static class MySqlConfiguration
                 "environment variable, to a complete connection string including Password.");
         }
 
+        if (connectionString.IndexOf("SslMode", StringComparison.OrdinalIgnoreCase) < 0)
+        {
+            builder.SslMode = MySqlSslMode.Disabled;
+        }
+
         builder.Pooling = true;
         builder.MinimumPoolSize = (uint)settings.MinPoolSize;
         builder.MaximumPoolSize = (uint)settings.MaxPoolSize;
         builder.ConnectionLifeTime = (uint)settings.ConnectionLifetimeSeconds;
         builder.ConnectionTimeout = (uint)settings.ConnectionTimeoutSeconds;
         builder.DefaultCommandTimeout = (uint)settings.CommandTimeoutSeconds;
-        builder.ConnectionReset = true;
+        builder.ConnectionReset = false;
         builder.AllowUserVariables = true;
         builder.UseAffectedRows = true;
         return builder.ConnectionString;
@@ -183,18 +188,18 @@ public sealed class EntityWriteInterceptor : SaveChangesInterceptor
     {
         switch (entry.Entity)
         {
-            case UserDB user:
+            case User user:
                 user.FullName = user.FullName.Trim();
                 user.Email = user.Email.Trim().ToLowerInvariant();
                 user.PhoneNumber = BlankToNull(user.PhoneNumber);
                 user.GitHubUserName = BlankToNull(user.GitHubUserName);
                 break;
-            case ProjectsDB project:
+            case Projects project:
                 project.ProjectName = project.ProjectName.Trim();
                 project.GitHubOwner = BlankToNull(project.GitHubOwner);
                 project.GitHubRepoName = BlankToNull(project.GitHubRepoName);
                 break;
-            case TasksDB task:
+            case Tasks task:
                 task.Title = task.Title.Trim();
                 task.GitHubPRStatus = BlankToNull(task.GitHubPRStatus);
                 task.GitHubPRUrl = BlankToNull(task.GitHubPRUrl);

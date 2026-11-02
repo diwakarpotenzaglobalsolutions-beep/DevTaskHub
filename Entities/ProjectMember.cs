@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace DevTaskHubBackend.Entities;
 
-public class ProjectMemberDB : BaseEntity
+public class ProjectMember : BaseEntity
 {
     [Key]
     public Guid ProjectMemberId { get; set; }

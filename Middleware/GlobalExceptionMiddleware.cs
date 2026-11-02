@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using DevTaskHubBackend.Exceptions;
 using DevTaskHubBackend.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +12,10 @@ namespace DevTaskHubBackend.Middleware;
 
 public class GlobalExceptionMiddleware
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.Never
+    };
 
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionMiddleware> _logger;
@@ -88,7 +92,7 @@ public class GlobalExceptionMiddleware
         {
             StatusCode = StatusCodes.Status400BadRequest,
             Message = HttpStatusMessages.Get(StatusCodes.Status400BadRequest),
-            TraceId = context.HttpContext.TraceIdentifier,
+            Data = null,
             Errors = errors
         });
     }
@@ -197,7 +201,7 @@ public class GlobalExceptionMiddleware
         {
             StatusCode = statusCode,
             Message = message,
-            TraceId = context.TraceIdentifier,
+            Data = null,
             Errors = errors,
             Detail = includeDetail ? exception!.ToString() : null
         };

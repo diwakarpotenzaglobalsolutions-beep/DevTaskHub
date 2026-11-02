@@ -26,8 +26,6 @@ public static class RoleHelper
     }
 }
 
- 
-
 public static class UserClaimsHelper
 {
     public static Guid GetUserId(this ClaimsPrincipal user)

@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace DevTaskHubBackend.Data;
 
-public class RoleDB
+public class Role
 {
     [Key]
     public Guid RoleId { get; set; }

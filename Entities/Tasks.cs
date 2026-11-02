@@ -1,9 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using DevTaskHubBackend.Data;
+using TaskStatus = DevTaskHubBackend.Data.TaskStatus;
 
 namespace DevTaskHubBackend.Entities;
 
-public class TasksDB : BaseEntity
+public class Tasks : BaseEntity
 {
     [Key]
     public Guid TaskId { get; set; }
@@ -16,9 +17,9 @@ public class TasksDB : BaseEntity
 
     public string? TaskSummery { get; set; }
 
-    public string Status { get; set; } = TaskStatuses.ToDo;
+    public string Status { get; set; } = nameof(TaskStatus.ToDo);
 
-    public string Priority { get; set; } = TaskPriorities.Medium;
+    public string Priority { get; set; } = nameof(TaskPriority.Medium);
 
     public DateTime? DueDate { get; set; }
 
