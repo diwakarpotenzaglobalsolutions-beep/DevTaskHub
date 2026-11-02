@@ -10,7 +10,7 @@
         "projectUniqueName": "/Users/apple/Desktop/DevTaskCRM/DevTaskHub/DevTaskHubBackend.csproj",
         "projectName": "DevTaskHubBackend",
         "projectPath": "/Users/apple/Desktop/DevTaskCRM/DevTaskHub/DevTaskHubBackend.csproj",
-        "packagesPath": "/var/folders/1q/j0wq12pn5dl_7qg20lr_835m0000gn/T/cursor-sandbox-cache/a22714c95f55e89b3c08954a08379797/nuget",
+        "packagesPath": "/Users/apple/.nuget/packages/",
         "outputPath": "/Users/apple/Desktop/DevTaskCRM/DevTaskHub/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
