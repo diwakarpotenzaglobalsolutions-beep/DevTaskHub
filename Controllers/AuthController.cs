@@ -1,3 +1,4 @@
+using DevTaskHubBackend.Helpers;
 using DevTaskHubBackend.Models;
 using DevTaskHubBackend.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -64,6 +65,22 @@ namespace DevTaskHubBackend.Controllers
             });
         }
 
+        [Authorize]
+        [HttpPost("Chnage-Password")]
+        public async Task<IActionResult> ChnagePassword([FromBody] ChnagePasswordDto chnagePasswordDto)
+        {
+            var userId = User.GetUserId();
+            
+            var result= await _authServices.ChnagePassword(userId,chnagePasswordDto);
+
+            Console.WriteLine(result);
+              
+            return Ok(new
+            {
+                status=true,
+                message="Chnage password successfull."
+            });
+        }
 
     }
 }

@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using DevTaskHubBackend.Data;
+using DevTaskHubBackend.Exceptions;
 
 namespace DevTaskHubBackend.Helpers;
 
@@ -21,5 +23,20 @@ public static class RoleHelper
                 "Invalid RoleId.",
                 nameof(roleId))
         };
+    }
+}
+
+public static class UserClaimsHelper
+{
+    public static Guid GetUserId(this ClaimsPrincipal user)
+    {
+        var userIdValue = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (Guid.TryParse(userIdValue, out var userId))
+        {
+            return userId;
+        }
+
+        throw new AppException(StatusCodes.Status401Unauthorized, "User is not unauthorized.");
     }
 }

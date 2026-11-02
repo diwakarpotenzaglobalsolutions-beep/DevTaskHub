@@ -19,6 +19,7 @@ public interface IAuthServices
     Task<RegisterResponseDto> RegisterUserAsync(RegisterRequestDto authDto);
     Task<LoginResponseDto?> RefreshTokenAsync(RefreshTokenDto request, CancellationToken cancellationToken = default);
     Task<LoginResponseDto> LoginAsync(LoginDto loginDto,CancellationToken cancellationToken=default);
+    Task<bool> ChnagePassword(Guid userId, ChnagePasswordDto chnagePasswordDto);
 }
 
 public class AuthServices : IAuthServices
@@ -164,6 +165,26 @@ public class AuthServices : IAuthServices
             
         };
         
+    }
+
+    public async Task<bool> ChnagePassword(Guid userId, ChnagePasswordDto chnagePasswordDto)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId);
+        if (user == null)
+        {
+            throw new AppException(StatusCodes.Status404NotFound, "No account found.");
+        }
+
+        var hasher = new PasswordHasher<User>();
+        if (hasher.VerifyHashedPassword(user, user.PasswordHash, chnagePasswordDto.CurrentPassword) == PasswordVerificationResult.Failed)
+        {
+            throw new AppException(StatusCodes.Status404NotFound, "Current password is wrong.");
+        }
+
+        user.PasswordHash = hasher.HashPassword(user, chnagePasswordDto.NewPassword);
+        user.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        return true;
     }
 
 }

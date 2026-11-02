@@ -58,4 +58,14 @@ public class LoginDto
     public string Password { get; set; } = string.Empty;
 }
 
+public class ChnagePasswordDto
+{
+    [Required(ErrorMessage = "Password is required.")]
+    public string CurrentPassword { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Password is required.")]
+    [StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters.")]
+    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).+$", ErrorMessage = "Password must contain uppercase, lowercase, number and special character.")]
+    public string NewPassword { get; set; } = string.Empty;
+}
 
