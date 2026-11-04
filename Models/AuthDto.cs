@@ -89,6 +89,7 @@ public class ProfileResponseDto
     public string Role { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
     public string? GitHubUserName { get; set; }
+    public string? GitHubAvatarUrl { get; set; }
 }
 
 public class ActiveAndDeActiveUserDto
@@ -107,5 +108,32 @@ public class EditProfileDto
     [RegularExpression(@"^[0-9]{10}$",
         ErrorMessage = "Please enter a valid 10-digit phone number.")]
     public string PhoneNumber { get; set; } = string.Empty;
+}
+
+
+public class AssignDevloperDto
+{
+    [Required]
+    public Guid DevloperID { get; set; }
+
+    [Required]
+    public Guid ManagerID { get; set; }
+}
+
+public class ManagerDeveloperDto
+{
+    public Guid ManagerId { get; set; }
+    public string ManagerName { get; set; } = string.Empty;
+    public string ManagerEmail { get; set; } = string.Empty;
+
+    public List<DeveloperDto> Developers { get; set; } = new();
+}
+
+public class DeveloperDto
+{
+    public Guid DeveloperId { get; set; }
+    public string FullName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
 }
 

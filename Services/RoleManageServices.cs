@@ -33,7 +33,9 @@ public class RoleManageServices : IRoleManageServices
             u.Email,
             u.PhoneNumber,
             u.RoleId,
-            u.IsActive
+            u.IsActive,
+            u.GitHubUserName,
+            u.GitHubAvatarUrl
         }).ToListAsync(cancellationToken);
 
         return users.Select(user => new ProfileResponseDto
@@ -43,7 +45,9 @@ public class RoleManageServices : IRoleManageServices
             Email = user.Email,
             PhoneNumber = user.PhoneNumber,
             Role = RoleHelper.GetRoleName(user.RoleId),
-            IsActive = user.IsActive
+            IsActive = user.IsActive,
+            GitHubUserName = user.GitHubUserName,
+            GitHubAvatarUrl = user.GitHubAvatarUrl
         }).ToList();
     }
 

@@ -22,7 +22,11 @@ public interface IAuthServices
     Task<bool> ChnagePassword(Guid userId, ChnagePasswordDto chnagePasswordDto);
     Task<ProfileResponseDto> GetProfileDetails(Guid userId);
     Task<bool> ActiveAndDeActiveUserAsync(ActiveAndDeActiveUserDto activeAndDeActiveUserDto, CancellationToken cancellationToken = default);
-    Task<ProfileResponseDto> EditProfileAsync(Guid userId,EditProfileDto request,CancellationToken cancellationToken=default);
+    Task<ProfileResponseDto> EditProfileAsync(Guid userId, EditProfileDto request, CancellationToken cancellationToken = default);
+    Task<bool> AssignDevloperToManagerAsync(AssignDevloperDto assignDevloperDto, CancellationToken cancellationToken = default);
+    Task<List<ProfileResponseDto>> GetMyDevelopersAsync(Guid managerId, CancellationToken cancellationToken=default);
+    Task<List<ManagerDeveloperDto>> GetManagerDevelopersAsync(CancellationToken cancellationToken=default);
+   
 }
 
 public class AuthServices : IAuthServices
@@ -206,7 +210,8 @@ public class AuthServices : IAuthServices
             PhoneNumber = user.PhoneNumber,
             Role = RoleHelper.GetRoleName(user.RoleId),
             IsActive = user.IsActive,
-            GitHubUserName = user.GitHubUserName
+            GitHubUserName = user.GitHubUserName,
+            GitHubAvatarUrl = user.GitHubAvatarUrl
         };
     }
 
@@ -235,13 +240,13 @@ public class AuthServices : IAuthServices
 
     }
 
-    public async Task<ProfileResponseDto> EditProfileAsync(Guid userId,EditProfileDto request,CancellationToken cancellationToken)
+    public async Task<ProfileResponseDto> EditProfileAsync(Guid userId, EditProfileDto request, CancellationToken cancellationToken)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId && !u.IsDeleted, cancellationToken);
 
         if (user == null)
         {
-            throw new AppException(StatusCodes.Status404NotFound,"User not found.");
+            throw new AppException(StatusCodes.Status404NotFound, "User not found.");
         }
         user.FullName = request.FullName.Trim();
         user.PhoneNumber = request.PhoneNumber.Trim();
@@ -258,8 +263,99 @@ public class AuthServices : IAuthServices
             PhoneNumber = user.PhoneNumber,
             Role = RoleHelper.GetRoleName(user.RoleId),
             IsActive = user.IsActive,
-            GitHubUserName = user.GitHubUserName
+            GitHubUserName = user.GitHubUserName,
+            GitHubAvatarUrl = user.GitHubAvatarUrl
         };
     }
+
+
+
+    public async Task<bool> AssignDevloperToManagerAsync(AssignDevloperDto assignDevloperDto, CancellationToken cancellationToken)
+    {
+        var devloper = await _context.Users.FirstOrDefaultAsync(u => u.UserID == assignDevloperDto.DevloperID && !u.IsDeleted, cancellationToken);
+        if (devloper == null)
+        {
+            throw new AppException(StatusCodes.Status404NotFound, "Developer not found.");
+        }
+        if (devloper.RoleId != UserRole.Developer.ToId())
+        {
+            throw new AppException(StatusCodes.Status400BadRequest, "Selected user is not a developer.");
+        }
+        var manager = await _context.Users.FirstOrDefaultAsync(u => u.UserID == assignDevloperDto.ManagerID && !u.IsDeleted, cancellationToken);
+        if (manager == null)
+        {
+            throw new AppException(StatusCodes.Status400BadRequest, "Project Manager not found.");
+        }
+        if (manager.RoleId != UserRole.Manager.ToId())
+        {
+            throw new AppException(StatusCodes.Status400BadRequest, "Selected user is not a Project Manager.");
+        }
+        if (!devloper.IsActive || !manager.IsActive)
+        {
+            throw new AppException(StatusCodes.Status400BadRequest, "Developer and Project Manager must be active.");
+        }
+        if (devloper.ManagerId == manager.UserID)
+        {
+            throw new AppException(StatusCodes.Status400BadRequest, "Developer is already assigned to this Project Manager.");
+        }
+        devloper.ManagerId = manager.UserID;
+        devloper.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<List<ProfileResponseDto>> GetMyDevelopersAsync(Guid managerId, CancellationToken cancellationToken)
+    {
+        var devloper = await _context.Users.AsNoTracking().Where(u => u.ManagerId == managerId && u.RoleId == UserRole.Developer.ToId() && u.IsActive && !u.IsDeleted)
+        .Select(u => new ProfileResponseDto
+        {
+            UserId = u.UserID,
+            FullName = u.FullName,
+            Email = u.Email,
+            PhoneNumber = u.PhoneNumber,
+            Role = "Developer",
+            IsActive = u.IsActive
+        }
+        ).ToListAsync(cancellationToken);
+
+        return devloper;
+    }
+
+    public async Task<List<ManagerDeveloperDto>> GetManagerDevelopersAsync(CancellationToken cancellationToken)
+{
+    var managers = await _context.Users.AsNoTracking().Where(u =>u.RoleId == UserRole.Manager.ToId() &&!u.IsDeleted).Select(u => new
+        {
+            u.UserID,
+            u.FullName,
+            u.Email
+        }).ToListAsync(cancellationToken);
+
+    var developers = await _context.Users.AsNoTracking().Where(u =>u.RoleId == UserRole.Developer.ToId() &&!u.IsDeleted &&u.ManagerId != null)
+        .Select(u => new
+        {
+            u.UserID,
+            u.FullName,
+            u.Email,
+            u.IsActive,
+            u.ManagerId
+        })
+        .ToListAsync(cancellationToken);
+
+    return managers.Select(manager => new ManagerDeveloperDto
+    {
+        ManagerId = manager.UserID,
+        ManagerName = manager.FullName,
+        ManagerEmail = manager.Email,
+
+        Developers = developers.Where(d => d.ManagerId == manager.UserID).Select(d => new DeveloperDto
+            {
+                DeveloperId = d.UserID,
+                FullName = d.FullName,
+                Email = d.Email,
+                IsActive = d.IsActive
+            }).ToList()
+
+    }).ToList();
+}
 
 }

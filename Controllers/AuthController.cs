@@ -132,7 +132,7 @@ namespace DevTaskHubBackend.Controllers
                     Message = "Unauthorized access."
                 });
             }
-            var result = await _authServices.EditProfileAsync(userId,request);
+            var result = await _authServices.EditProfileAsync(userId, request);
 
             return Ok(new
             {
@@ -142,6 +142,57 @@ namespace DevTaskHubBackend.Controllers
             });
 
         }
+        [HttpPut("Assign-Developer")]
+        [RoleAuthorize(UserRole.Admin)]
+        public async Task<IActionResult> AssignDeveloper([FromBody] AssignDevloperDto request, CancellationToken cancellationToken)
+        {
+            await _authServices.AssignDevloperToManagerAsync(request, cancellationToken);
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "Developer assigned to Project Manager successfully."
+            });
+        }
+
+        [HttpGet("My-developers")]
+        [RoleAuthorize(UserRole.Admin, UserRole.Manager)]
+        public async Task<IActionResult> GetMyDevelopers(
+        CancellationToken cancellationToken)
+        {
+            Guid managerId = User.GetUserId();
+
+            if (managerId == Guid.Empty)
+                return Unauthorized();
+
+            var developers = await _authServices.GetMyDevelopersAsync(
+                managerId,
+                cancellationToken);
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "Developers retrieved successfully.",
+                Data = developers
+            });
+        }
+
+        [HttpGet("Manager-Developers")]
+        [RoleAuthorize(UserRole.Admin)]
+        public async Task<IActionResult> GetManagerDevelopers(CancellationToken cancellationToken)
+        {
+            var result = await _authServices.GetManagerDevelopersAsync(
+                cancellationToken);
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "Manager and developer details retrieved successfully.",
+                Data = result
+            });
+        }
 
     }
+
+
 }

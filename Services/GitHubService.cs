@@ -55,23 +55,16 @@ public class GitHubService : IGitHubService
                 "GitHub account not found.");
         }
 
-        if (response.StatusCode == HttpStatusCode.Forbidden ||
-            response.StatusCode == HttpStatusCode.TooManyRequests)
+        if (response.StatusCode == HttpStatusCode.Forbidden || response.StatusCode == HttpStatusCode.TooManyRequests)
         {
-            throw new AppException(
-                StatusCodes.Status503ServiceUnavailable,
-                "GitHub API limit reached. Please try again later.");
+            throw new AppException(StatusCodes.Status503ServiceUnavailable,"GitHub API limit reached. Please try again later.");
         }
 
         response.EnsureSuccessStatusCode();
 
-        var profile = await response.Content
-            .ReadFromJsonAsync<GitHubProfileDto>(
-                cancellationToken: cancellationToken);
+        var profile = await response.Content.ReadFromJsonAsync<GitHubProfileDto>(cancellationToken: cancellationToken);
 
-        return profile ?? throw new AppException(
-            StatusCodes.Status502BadGateway,
-            "Unable to fetch GitHub account.");
+        return profile ?? throw new AppException(StatusCodes.Status502BadGateway,"Unable to fetch GitHub account.");
     }
 
     public async Task<GitHubProfileDto> LinkGitHubAccountAsync(
