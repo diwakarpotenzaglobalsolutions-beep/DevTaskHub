@@ -18,8 +18,11 @@ public interface IAuthServices
 {
     Task<RegisterResponseDto> RegisterUserAsync(RegisterRequestDto authDto);
     Task<LoginResponseDto?> RefreshTokenAsync(RefreshTokenDto request, CancellationToken cancellationToken = default);
-    Task<LoginResponseDto> LoginAsync(LoginDto loginDto,CancellationToken cancellationToken=default);
+    Task<LoginResponseDto> LoginAsync(LoginDto loginDto, CancellationToken cancellationToken = default);
     Task<bool> ChnagePassword(Guid userId, ChnagePasswordDto chnagePasswordDto);
+    Task<ProfileResponseDto> GetProfileDetails(Guid userId);
+    Task<bool> ActiveAndDeActiveUserAsync(ActiveAndDeActiveUserDto activeAndDeActiveUserDto, CancellationToken cancellationToken = default);
+    Task<ProfileResponseDto> EditProfileAsync(Guid userId,EditProfileDto request,CancellationToken cancellationToken=default);
 }
 
 public class AuthServices : IAuthServices
@@ -28,10 +31,10 @@ public class AuthServices : IAuthServices
     private readonly IConfiguration _configuration;
 
 
-    public AuthServices(MySqlDbContext context,IConfiguration configuration)
+    public AuthServices(MySqlDbContext context, IConfiguration configuration)
     {
         _context = context;
-        _configuration=configuration;
+        _configuration = configuration;
     }
     private string CreateToken(User user)
     {
@@ -39,7 +42,7 @@ public class AuthServices : IAuthServices
         {
           new Claim(ClaimTypes.Name,user.FullName),
           new Claim(ClaimTypes.NameIdentifier,user.UserID.ToString()),
-        new Claim(ClaimTypes.Role,RoleHelper.GetRoleName(user.RoleId))
+          new Claim(ClaimTypes.Role,RoleHelper.GetRoleName(user.RoleId))
         };
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetValue<string>("AppSettings:Token")!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
@@ -56,7 +59,7 @@ public class AuthServices : IAuthServices
 
 
 
-        private async Task<string> GenrateAndSaveRefreshToken(User user, CancellationToken cancellationToken = default)
+    private async Task<string> GenrateAndSaveRefreshToken(User user, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var randomNumber = new byte[32];
@@ -73,7 +76,7 @@ public class AuthServices : IAuthServices
 
 
 
-        public async Task<LoginResponseDto?> RefreshTokenAsync(RefreshTokenDto request, CancellationToken cancellationToken = default)
+    public async Task<LoginResponseDto?> RefreshTokenAsync(RefreshTokenDto request, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (string.IsNullOrWhiteSpace(request.RefreshToken))
@@ -95,7 +98,7 @@ public class AuthServices : IAuthServices
     }
 
 
-        public async Task<RegisterResponseDto> RegisterUserAsync(RegisterRequestDto authDto)
+    public async Task<RegisterResponseDto> RegisterUserAsync(RegisterRequestDto authDto)
     {
         var email = authDto.Email.Trim().ToLowerInvariant();
 
@@ -126,8 +129,8 @@ public class AuthServices : IAuthServices
         };
 
         user.PasswordHash = new PasswordHasher<User>().HashPassword(user, authDto.Password);
-       await _context.Users.AddAsync(user);
-    await _context.SaveChangesAsync();
+        await _context.Users.AddAsync(user);
+        await _context.SaveChangesAsync();
         return new RegisterResponseDto
         {
             UserId = user.UserID,
@@ -140,14 +143,14 @@ public class AuthServices : IAuthServices
     }
 
 
-    public async Task<LoginResponseDto> LoginAsync(LoginDto loginDto,CancellationToken cancellationToken)
+    public async Task<LoginResponseDto> LoginAsync(LoginDto loginDto, CancellationToken cancellationToken)
     {
-        var user=await _context.Users.FirstOrDefaultAsync(u=>u.Email==loginDto.Email);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == loginDto.Email);
         if (user == null)
         {
-             throw new AppException(StatusCodes.Status404NotFound, "No account found with this email address.");
+            throw new AppException(StatusCodes.Status404NotFound, "No account found with this email address.");
         }
-        if(new PasswordHasher<User>().VerifyHashedPassword(user,user.PasswordHash,loginDto.Password)==PasswordVerificationResult.Failed)
+        if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, loginDto.Password) == PasswordVerificationResult.Failed)
         {
             throw new AppException(StatusCodes.Status404NotFound, "The password you entered is incorrect.");
         }
@@ -155,16 +158,16 @@ public class AuthServices : IAuthServices
 
         return new LoginResponseDto
         {
-            UserId=user.UserID,
-            FullName=user.FullName,
-            Email=user.Email,
-            PhoneNumber=user.PhoneNumber,
-            Role=RoleHelper.GetRoleName(user.RoleId),
-            Token=CreateToken(user),
-            RefreshToken=await GenrateAndSaveRefreshToken(user,cancellationToken)
-            
+            UserId = user.UserID,
+            FullName = user.FullName,
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            Role = RoleHelper.GetRoleName(user.RoleId),
+            Token = CreateToken(user),
+            RefreshToken = await GenrateAndSaveRefreshToken(user, cancellationToken)
+
         };
-        
+
     }
 
     public async Task<bool> ChnagePassword(Guid userId, ChnagePasswordDto chnagePasswordDto)
@@ -185,6 +188,78 @@ public class AuthServices : IAuthServices
         user.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<ProfileResponseDto> GetProfileDetails(Guid userId)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId);
+        if (user == null)
+        {
+            throw new AppException(StatusCodes.Status404NotFound, "No account found.");
+        }
+
+        return new ProfileResponseDto
+        {
+            UserId = user.UserID,
+            FullName = user.FullName,
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            Role = RoleHelper.GetRoleName(user.RoleId),
+            IsActive = user.IsActive,
+            GitHubUserName = user.GitHubUserName
+        };
+    }
+
+
+    public async Task<bool> ActiveAndDeActiveUserAsync(ActiveAndDeActiveUserDto activeAndDeActiveUserDto, CancellationToken cancellationToken)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == activeAndDeActiveUserDto.UserId && !u.IsDeleted, cancellationToken);
+
+        if (user == null)
+        {
+            throw new AppException(StatusCodes.Status404NotFound, "User not found");
+        }
+        if (activeAndDeActiveUserDto.Active == 1)
+        {
+            user.IsActive = true;
+            user.UpdatedAt = DateTime.UtcNow;
+        }
+        if (activeAndDeActiveUserDto.Active == 0)
+        {
+            user.IsActive = false;
+            user.UpdatedAt = DateTime.UtcNow;
+        }
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return true;
+
+    }
+
+    public async Task<ProfileResponseDto> EditProfileAsync(Guid userId,EditProfileDto request,CancellationToken cancellationToken)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserID == userId && !u.IsDeleted, cancellationToken);
+
+        if (user == null)
+        {
+            throw new AppException(StatusCodes.Status404NotFound,"User not found.");
+        }
+        user.FullName = request.FullName.Trim();
+        user.PhoneNumber = request.PhoneNumber.Trim();
+
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return new ProfileResponseDto
+        {
+            UserId = user.UserID,
+            FullName = user.FullName,
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            Role = RoleHelper.GetRoleName(user.RoleId),
+            IsActive = user.IsActive,
+            GitHubUserName = user.GitHubUserName
+        };
     }
 
 }

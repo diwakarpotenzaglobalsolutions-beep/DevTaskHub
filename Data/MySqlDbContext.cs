@@ -53,6 +53,8 @@ public class MySqlDbContext : MyDbContext
         entity.Property(user => user.PhoneNumber).HasMaxLength(32);
         entity.Property(user => user.PasswordHash).HasMaxLength(500).IsRequired();
         entity.Property(user => user.GitHubUserName).HasMaxLength(39);
+        entity.Property(user => user.GitHubProfileUrl).HasMaxLength(200);
+        entity.Property(user => user.GitHubAvatarUrl).HasMaxLength(500);
         entity.Property(user => user.IsActive).HasDefaultValue(true);
         entity.Property(user => user.IsDeleted).HasDefaultValue(false);
         entity.Property(user => user.RowVersion).IsConcurrencyToken().HasDefaultValue(0u);
@@ -60,6 +62,7 @@ public class MySqlDbContext : MyDbContext
         entity.HasIndex(user => user.Email).IsUnique().HasDatabaseName("UX_Users_Email");
         entity.HasIndex(user => user.PhoneNumber).IsUnique().HasDatabaseName("UX_Users_PhoneNumber");
         entity.HasIndex(user => user.GitHubUserName).IsUnique().HasDatabaseName("UX_Users_GitHubUserName");
+        entity.HasIndex(user => user.GitHubId).IsUnique().HasDatabaseName("UX_Users_GitHubId");
         entity.HasIndex(user => new { user.RoleId, user.IsActive, user.IsDeleted }).HasDatabaseName("IX_Users_Role_Active");
         entity.HasIndex(user => user.ManagerId).HasDatabaseName("IX_Users_ManagerId");
         entity.HasIndex(user => new { user.IsActive, user.IsDeleted, user.CreatedAt }).HasDatabaseName("IX_Users_Active_CreatedAt");

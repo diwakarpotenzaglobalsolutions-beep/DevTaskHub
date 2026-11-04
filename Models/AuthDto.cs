@@ -79,3 +79,33 @@ public class ChnagePasswordDto
     public string NewPassword { get; set; }=string.Empty;
 }
 
+
+public class ProfileResponseDto
+{
+    public Guid UserId { get; set; }
+    public string FullName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string PhoneNumber { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
+    public string? GitHubUserName { get; set; }
+}
+
+public class ActiveAndDeActiveUserDto
+{
+    public Guid UserId { get; set; }
+    public int Active { get; set; }
+}
+
+public class EditProfileDto
+{
+    [Required(ErrorMessage = "Full name is required.")]
+    [StringLength(100, ErrorMessage = "Full name cannot exceed 100 characters.")]
+    public string FullName { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Phone number is required.")]
+    [RegularExpression(@"^[0-9]{10}$",
+        ErrorMessage = "Please enter a valid 10-digit phone number.")]
+    public string PhoneNumber { get; set; } = string.Empty;
+}
+

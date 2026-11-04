@@ -280,6 +280,17 @@ namespace DevTaskHubBackend.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("varchar(120)");
 
+                    b.Property<string>("GitHubAvatarUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<long?>("GitHubId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("GitHubProfileUrl")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
                     b.Property<string>("GitHubUserName")
                         .HasMaxLength(39)
                         .HasColumnType("varchar(39)");
@@ -333,6 +344,10 @@ namespace DevTaskHubBackend.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasDatabaseName("UX_Users_Email");
+
+                    b.HasIndex("GitHubId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Users_GitHubId");
 
                     b.HasIndex("GitHubUserName")
                         .IsUnique()
