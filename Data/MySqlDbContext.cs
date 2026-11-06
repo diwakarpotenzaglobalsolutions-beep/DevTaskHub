@@ -132,6 +132,7 @@ public class MySqlDbContext : MyDbContext
 
         entity.HasOne<Projects>().WithMany().HasForeignKey(task => task.ProjectId).OnDelete(DeleteBehavior.Cascade);
         entity.HasOne<User>().WithMany().HasForeignKey(task => task.AssignedToUserId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<User>().WithMany().HasForeignKey(task => task.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureProjectMembers(ModelBuilder modelBuilder)

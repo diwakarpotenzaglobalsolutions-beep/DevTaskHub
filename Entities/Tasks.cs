@@ -13,6 +13,8 @@ public class Tasks : BaseEntity
 
     public Guid? AssignedToUserId { get; set; }
 
+    public Guid CreatedByUserId { get; set; }
+
     public string Title { get; set; } = string.Empty;
 
     public string? TaskSummery { get; set; }
