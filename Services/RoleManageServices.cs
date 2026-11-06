@@ -35,7 +35,7 @@ public class RoleManageServices : IRoleManageServices
             u.RoleId,
             u.IsActive,
             u.GitHubUserName,
-            u.GitHubAvatarUrl
+            u.GitHubAvatarUrl,
         }).ToListAsync(cancellationToken);
 
         return users.Select(user => new ProfileResponseDto

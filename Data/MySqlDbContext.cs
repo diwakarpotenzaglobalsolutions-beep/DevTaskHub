@@ -97,6 +97,7 @@ public class MySqlDbContext : MyDbContext
             OneOf(projectStatus, Enum.GetNames<ProjectStatus>())));
 
         entity.HasOne<User>().WithMany().HasForeignKey(project => project.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<User>().WithMany().HasForeignKey(project => project.AssignedToUserId).OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureTasks(ModelBuilder modelBuilder)

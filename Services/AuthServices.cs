@@ -24,9 +24,9 @@ public interface IAuthServices
     Task<bool> ActiveAndDeActiveUserAsync(ActiveAndDeActiveUserDto activeAndDeActiveUserDto, CancellationToken cancellationToken = default);
     Task<ProfileResponseDto> EditProfileAsync(Guid userId, EditProfileDto request, CancellationToken cancellationToken = default);
     Task<bool> AssignDevloperToManagerAsync(AssignDevloperDto assignDevloperDto, CancellationToken cancellationToken = default);
-    Task<List<ProfileResponseDto>> GetMyDevelopersAsync(Guid managerId, CancellationToken cancellationToken=default);
-    Task<List<ManagerDeveloperDto>> GetManagerDevelopersAsync(CancellationToken cancellationToken=default);
-   
+    Task<List<ProfileResponseDto>> GetMyDevelopersAsync(Guid managerId, CancellationToken cancellationToken = default);
+    Task<List<ManagerDeveloperDto>> GetManagerDevelopersAsync(CancellationToken cancellationToken = default);
+
 }
 
 public class AuthServices : IAuthServices
@@ -147,18 +147,48 @@ public class AuthServices : IAuthServices
     }
 
 
-    public async Task<LoginResponseDto> LoginAsync(LoginDto loginDto, CancellationToken cancellationToken)
+    public async Task<LoginResponseDto> LoginAsync(
+        LoginDto loginDto,
+        CancellationToken cancellationToken)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == loginDto.Email);
+        var user = await _context.Users
+            .FirstOrDefaultAsync(
+                u => u.Email == loginDto.Email &&
+                     u.IsActive &&
+                     !u.IsDeleted,
+                cancellationToken);
+
         if (user == null)
         {
-            throw new AppException(StatusCodes.Status404NotFound, "No account found with this email address.");
-        }
-        if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, loginDto.Password) == PasswordVerificationResult.Failed)
-        {
-            throw new AppException(StatusCodes.Status404NotFound, "The password you entered is incorrect.");
+            throw new AppException(
+                StatusCodes.Status401Unauthorized,
+                "Invalid email or password.");
         }
 
+        if (new PasswordHasher<User>().VerifyHashedPassword(
+            user,
+            user.PasswordHash,
+            loginDto.Password) == PasswordVerificationResult.Failed)
+        {
+            throw new AppException(
+                StatusCodes.Status401Unauthorized,
+                "Invalid email or password.");
+        }
+
+        string? managerName = "";
+
+        if (user.RoleId != UserRole.Admin.ToId())
+        {
+            Guid? managerId = user.ManagerId;
+            if (managerId.HasValue)
+            {
+                managerName = await _context.Users.Where(u => u.UserID == managerId.Value &&u.IsActive &&!u.IsDeleted).Select(u => u.FullName).FirstOrDefaultAsync(cancellationToken);
+            }
+            else
+            {
+                managerName = await _context.Users.Where(u => u.RoleId == UserRole.Admin.ToId() &&u.IsActive &&!u.IsDeleted).OrderBy(u => u.CreatedAt).Select(u => u.FullName).FirstOrDefaultAsync(cancellationToken);
+            }
+        }
 
         return new LoginResponseDto
         {
@@ -167,11 +197,10 @@ public class AuthServices : IAuthServices
             Email = user.Email,
             PhoneNumber = user.PhoneNumber,
             Role = RoleHelper.GetRoleName(user.RoleId),
+            ManagerName = managerName,
             Token = CreateToken(user),
             RefreshToken = await GenrateAndSaveRefreshToken(user, cancellationToken)
-
         };
-
     }
 
     public async Task<bool> ChnagePassword(Guid userId, ChnagePasswordDto chnagePasswordDto)
@@ -322,32 +351,32 @@ public class AuthServices : IAuthServices
     }
 
     public async Task<List<ManagerDeveloperDto>> GetManagerDevelopersAsync(CancellationToken cancellationToken)
-{
-    var managers = await _context.Users.AsNoTracking().Where(u =>u.RoleId == UserRole.Manager.ToId() &&!u.IsDeleted).Select(u => new
+    {
+        var managers = await _context.Users.AsNoTracking().Where(u => u.RoleId == UserRole.Manager.ToId() && !u.IsDeleted).Select(u => new
         {
             u.UserID,
             u.FullName,
             u.Email
         }).ToListAsync(cancellationToken);
 
-    var developers = await _context.Users.AsNoTracking().Where(u =>u.RoleId == UserRole.Developer.ToId() &&!u.IsDeleted &&u.ManagerId != null)
-        .Select(u => new
+        var developers = await _context.Users.AsNoTracking().Where(u => u.RoleId == UserRole.Developer.ToId() && !u.IsDeleted && u.ManagerId != null)
+            .Select(u => new
+            {
+                u.UserID,
+                u.FullName,
+                u.Email,
+                u.IsActive,
+                u.ManagerId
+            })
+            .ToListAsync(cancellationToken);
+
+        return managers.Select(manager => new ManagerDeveloperDto
         {
-            u.UserID,
-            u.FullName,
-            u.Email,
-            u.IsActive,
-            u.ManagerId
-        })
-        .ToListAsync(cancellationToken);
+            ManagerId = manager.UserID,
+            ManagerName = manager.FullName,
+            ManagerEmail = manager.Email,
 
-    return managers.Select(manager => new ManagerDeveloperDto
-    {
-        ManagerId = manager.UserID,
-        ManagerName = manager.FullName,
-        ManagerEmail = manager.Email,
-
-        Developers = developers.Where(d => d.ManagerId == manager.UserID).Select(d => new DeveloperDto
+            Developers = developers.Where(d => d.ManagerId == manager.UserID).Select(d => new DeveloperDto
             {
                 DeveloperId = d.UserID,
                 FullName = d.FullName,
@@ -355,7 +384,7 @@ public class AuthServices : IAuthServices
                 IsActive = d.IsActive
             }).ToList()
 
-    }).ToList();
-}
+        }).ToList();
+    }
 
 }

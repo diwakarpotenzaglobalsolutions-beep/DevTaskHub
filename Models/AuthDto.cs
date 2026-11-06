@@ -52,6 +52,7 @@ public class RefreshTokenDto
 
 public class LoginResponseDto : RegisterResponseDto
 {
+    public string? ManagerName { get; set; }
     public string Token { get; set; } = string.Empty;
     public string RefreshToken { get; set; } = string.Empty;
 }
