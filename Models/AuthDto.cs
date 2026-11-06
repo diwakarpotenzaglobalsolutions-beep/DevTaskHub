@@ -4,6 +4,15 @@ using DevTaskHubBackend.Entities;
 
 namespace DevTaskHubBackend.Models;
 
+public class AuthDto
+{
+    public  string  FullName { get; set; }=string.Empty;
+    public  string  Email { get; set; }=string.Empty;
+    public  string  PhoneNumber { get; set; }=string.Empty;
+    public  string  Password { get; set; }=string.Empty;
+}
+
+
 public class RegisterRequestDto
 {
     [Required(ErrorMessage = "Full name is required.")]
@@ -50,22 +59,81 @@ public class LoginResponseDto : RegisterResponseDto
 
 public class LoginDto
 {
-    [Required]
-    [EmailAddress]
+    [Required(ErrorMessage ="Email is required")]
+    [EmailAddress(ErrorMessage ="Please enter valid email address")]
     public string Email { get; set; } = string.Empty;
 
-    [Required]
+    [Required(ErrorMessage ="Passowrd is required.")]
     public string Password { get; set; } = string.Empty;
 }
 
 public class ChnagePasswordDto
 {
-    [Required(ErrorMessage = "Password is required.")]
-    public string CurrentPassword { get; set; } = string.Empty;
+     [Required(ErrorMessage = "Password is required.")]
+    public string CurrentPassword { get; set; }=string.Empty;
 
+    
     [Required(ErrorMessage = "Password is required.")]
     [StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters.")]
-    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).+$", ErrorMessage = "Password must contain uppercase, lowercase, number and special character.")]
-    public string NewPassword { get; set; } = string.Empty;
+    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).+$",ErrorMessage = "Password must contain uppercase, lowercase, number and special character.")]
+    public string NewPassword { get; set; }=string.Empty;
+}
+
+
+public class ProfileResponseDto
+{
+    public Guid UserId { get; set; }
+    public string FullName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string PhoneNumber { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
+    public string? GitHubUserName { get; set; }
+    public string? GitHubAvatarUrl { get; set; }
+}
+
+public class ActiveAndDeActiveUserDto
+{
+    public Guid UserId { get; set; }
+    public int Active { get; set; }
+}
+
+public class EditProfileDto
+{
+    [Required(ErrorMessage = "Full name is required.")]
+    [StringLength(100, ErrorMessage = "Full name cannot exceed 100 characters.")]
+    public string FullName { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Phone number is required.")]
+    [RegularExpression(@"^[0-9]{10}$",
+        ErrorMessage = "Please enter a valid 10-digit phone number.")]
+    public string PhoneNumber { get; set; } = string.Empty;
+}
+
+
+public class AssignDevloperDto
+{
+    [Required]
+    public Guid DevloperID { get; set; }
+
+    [Required]
+    public Guid ManagerID { get; set; }
+}
+
+public class ManagerDeveloperDto
+{
+    public Guid ManagerId { get; set; }
+    public string ManagerName { get; set; } = string.Empty;
+    public string ManagerEmail { get; set; } = string.Empty;
+
+    public List<DeveloperDto> Developers { get; set; } = new();
+}
+
+public class DeveloperDto
+{
+    public Guid DeveloperId { get; set; }
+    public string FullName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
 }
 

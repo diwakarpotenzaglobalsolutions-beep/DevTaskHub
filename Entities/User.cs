@@ -18,15 +18,17 @@ public class User : BaseEntity
     public Guid RoleId { get; set; }
 
     public Guid? ManagerId { get; set; }
-
+    public long? GitHubId { get; set; }
     public string? GitHubUserName { get; set; }
+
+    public string? GitHubProfileUrl { get; set; }
+    public string? GitHubAvatarUrl { get; set; }
 
     public bool IsActive { get; set; } = true;
 
     public bool IsDeleted { get; set; }
 
     public uint RowVersion { get; set; }
-
       public string RefreshToken { get; set; }=string.Empty;
 
   public DateTime RefreshTokenExpiry {get;set;} = DateTime.UtcNow;
