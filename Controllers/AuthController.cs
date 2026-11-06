@@ -142,7 +142,7 @@ namespace DevTaskHubBackend.Controllers
             });
 
         }
-        [HttpPut("Assign-Developer")]
+        [HttpPost("Assign-Developer")]
         [RoleAuthorize(UserRole.Admin)]
         public async Task<IActionResult> AssignDeveloper([FromBody] AssignDevloperDto request, CancellationToken cancellationToken)
         {

@@ -97,6 +97,9 @@ namespace DevTaskHubBackend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid>("AssignedToUserId")
+                        .HasColumnType("char(36)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
@@ -147,6 +150,8 @@ namespace DevTaskHubBackend.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
                     b.HasKey("ProjectId");
+
+                    b.HasIndex("AssignedToUserId");
 
                     b.HasIndex("GitHubOwner", "GitHubRepoName")
                         .IsUnique()
@@ -389,6 +394,12 @@ namespace DevTaskHubBackend.Migrations
 
             modelBuilder.Entity("DevTaskHubBackend.Entities.Projects", b =>
                 {
+                    b.HasOne("DevTaskHubBackend.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("AssignedToUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("DevTaskHubBackend.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")

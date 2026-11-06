@@ -16,11 +16,13 @@ public class Projects : BaseEntity
 
     public Guid CreatedByUserId { get; set; }
 
+    public Guid AssignedToUserId { get; set; }
+
     public string? GitHubOwner { get; set; }
 
     public string? GitHubRepoName { get; set; }
 
-    public bool IsDeleted { get; set; }
+    public bool IsDeleted { get; set; } = false;
 
     public uint RowVersion { get; set; }
 }

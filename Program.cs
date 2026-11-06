@@ -48,6 +48,7 @@ builder.Services.AddMySql(
 
 builder.Services.AddScoped<IAuthServices, AuthServices>();
 builder.Services.AddScoped<IRoleManageServices, RoleManageServices>();
+builder.Services.AddScoped<IProjectServices, ProjectServices>();
 
 var token = builder.Configuration["AppSettings:Token"]
     ?? throw new InvalidOperationException(
