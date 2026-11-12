@@ -36,10 +36,10 @@ namespace DevTaskHubBackend.Controllers
         }
         [HttpGet("Get-All-Projects")]
         [RoleAuthorize(UserRole.Manager, UserRole.Developer)]
-        public async Task<IActionResult> GetAllProjects([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetAllProjects([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null, [FromQuery] string? status = null, [FromQuery] string? sortBy = null, [FromQuery] string? sortOrder = null)
         {
             Guid currentUserId = User.GetUserId();
-            var projects = await _projectServices.GetProjectAsync(currentUserId, page, pageSize);
+            var projects = await _projectServices.GetProjectAsync(currentUserId, page, pageSize, search, status, sortBy, sortOrder);
             return Ok(new
             {
                 Success = true,

@@ -10,7 +10,7 @@ namespace DevTaskHubBackend.Services;
 public interface IProjectServices
 {
     Task<CreateProjectResponseDto> CreateProjectAsync(Guid userId, CreateProjectDto createProjectDto, CancellationToken cancellationToken = default);
-    Task<ProjectListDto> GetProjectAsync(Guid currentUserId, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<ProjectListDto> GetProjectAsync(Guid currentUserId, int page, int pageSize, string? search, string? status, string? sortBy, string? sortOrder, CancellationToken cancellationToken = default);
     Task<GetProjectResponseDto> EditProjectAsync(Guid projectID, EditProjectDto editProjectDto, Guid currentUserID, CancellationToken cancellationToken = default);
     Task<bool> DeleteProjectAsync(Guid projectId, Guid currentUserId, CancellationToken cancellationToken = default);
     Task<bool> ReAsignToProjectAsync(ReAsignProjectDto reAsignProjectDto, CancellationToken cancellationToken = default);
@@ -63,7 +63,7 @@ public class ProjectServices : IProjectServices
     }
 
 
-    public async Task<ProjectListDto> GetProjectAsync(Guid currentUserId, int page, int pageSize, CancellationToken cancellationToken)
+    public async Task<ProjectListDto> GetProjectAsync(Guid currentUserId, int page, int pageSize, string? search, string? status, string? sortBy, string? sortOrder, CancellationToken cancellationToken)
     {
         if (page < 1)
         {
@@ -96,10 +96,27 @@ public class ProjectServices : IProjectServices
         {
             throw new AppException(StatusCodes.Status403Forbidden, "You do not have permission to view all projects.");
         }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            query = query.Where(project => project.ProjectName.Contains(term));
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (!Enum.TryParse<ProjectStatus>(status.Trim(), true, out var projectStatus) || !Enum.IsDefined(projectStatus))
+            {
+                throw new AppException(StatusCodes.Status400BadRequest, "Invalid project status.");
+            }
+
+            var statusName = projectStatus.ToString();
+            query = query.Where(project => project.Status == statusName);
+        }
+
         var projects = from project in query
                        join creator in _myDbContext.Users.AsNoTracking() on project.CreatedByUserId equals creator.UserID
                        join assignee in _myDbContext.Users.AsNoTracking() on project.AssignedToUserId equals assignee.UserID
-                       orderby project.CreatedAt descending
                        select new GetProjectResponseDto
                        {
                            ProjectId = project.ProjectId,
@@ -113,6 +130,14 @@ public class ProjectServices : IProjectServices
                            CreatedAt = project.CreatedAt,
                            UpdatedAt = project.UpdatedAt
                        };
+
+        var descending = !string.Equals(sortOrder, "asc", StringComparison.OrdinalIgnoreCase);
+        projects = sortBy?.Trim().ToLowerInvariant() switch
+        {
+            "name" or "projectname" => descending ? projects.OrderByDescending(project => project.ProjectName) : projects.OrderBy(project => project.ProjectName),
+            "status" => descending ? projects.OrderByDescending(project => project.Status) : projects.OrderBy(project => project.Status),
+            _ => descending ? projects.OrderByDescending(project => project.CreatedAt) : projects.OrderBy(project => project.CreatedAt)
+        };
 
         var totalCount = await projects.CountAsync(cancellationToken);
         var items = await projects.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
