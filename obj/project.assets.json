@@ -4271,7 +4271,7 @@
     ]
   },
   "packageFolders": {
-    "/Users/apple/.nuget/packages/": {}
+    "/var/folders/1q/j0wq12pn5dl_7qg20lr_835m0000gn/T/cursor-sandbox-cache/672c893e3716b2e5e592e57d69438561/nuget": {}
   },
   "project": {
     "version": "1.0.0",
@@ -4279,7 +4279,7 @@
       "projectUniqueName": "/Users/apple/Desktop/DevTaskCRM/DevTaskHub/DevTaskHubBackend.csproj",
       "projectName": "DevTaskHubBackend",
       "projectPath": "/Users/apple/Desktop/DevTaskCRM/DevTaskHub/DevTaskHubBackend.csproj",
-      "packagesPath": "/Users/apple/.nuget/packages/",
+      "packagesPath": "/var/folders/1q/j0wq12pn5dl_7qg20lr_835m0000gn/T/cursor-sandbox-cache/672c893e3716b2e5e592e57d69438561/nuget",
       "outputPath": "/Users/apple/Desktop/DevTaskCRM/DevTaskHub/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [

@@ -109,7 +109,10 @@ public class TaskServices : ITaskServices
                 CreatedByUserId = t.CreatedByUserId,
                 CreatedByName = _mySqlDbContext.Users.Where(u => u.UserID == t.CreatedByUserId).Select(u => u.FullName).FirstOrDefault() ?? string.Empty,
                 DueDate = t.DueDate,
-                CreatedAt = t.CreatedAt
+                CreatedAt = t.CreatedAt,
+                GitHubPRNumber = t.GitHubPRNumber,
+                GitHubPRStatus = t.GitHubPRStatus,
+                GitHubPRUrl = t.GitHubPRUrl
             })
             .ToListAsync(cancellationToken);
 
@@ -184,10 +187,8 @@ public class TaskServices : ITaskServices
         if (developer == null)
             throw new AppException(StatusCodes.Status400BadRequest, "Invalid or inactive developer.");
 
-        bool isProjectMember = await _mySqlDbContext.ProjectMembers.AnyAsync(pm => pm.ProjectId == project.ProjectId && pm.UserId == developer.UserID, cancellationToken);
-
-        if (!isProjectMember)
-            throw new AppException(StatusCodes.Status400BadRequest, "Developer is not assigned to this project.");
+        if (developer.ManagerId != project.AssignedToUserId)
+            throw new AppException(StatusCodes.Status400BadRequest, "This developer is not under the project's manager.");
 
         task.AssignedToUserId = developer.UserID;
         task.UpdatedAt = DateTime.UtcNow;

@@ -43,6 +43,9 @@ public class GetTaskResponseDto
     public string ProjectName { get; set; } = string.Empty;
     public DateTime? DueDate { get; set; }
     public DateTime CreatedAt { get; set; }
+    public int? GitHubPRNumber { get; set; }
+    public string? GitHubPRStatus { get; set; }
+    public string? GitHubPRUrl { get; set; }
 }
 
 public class EditTaskDto
