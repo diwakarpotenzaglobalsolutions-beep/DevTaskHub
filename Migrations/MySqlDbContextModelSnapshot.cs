@@ -181,6 +181,9 @@ namespace DevTaskHubBackend.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("char(36)");
+
                     b.Property<DateTime?>("DueDate")
                         .HasColumnType("datetime(6)");
 
@@ -241,6 +244,8 @@ namespace DevTaskHubBackend.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
                     b.HasKey("TaskId");
+
+                    b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("ProjectId", "CreatedAt")
                         .HasDatabaseName("IX_Tasks_Project_Created");
@@ -413,6 +418,12 @@ namespace DevTaskHubBackend.Migrations
                         .WithMany()
                         .HasForeignKey("AssignedToUserId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DevTaskHubBackend.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("DevTaskHubBackend.Entities.Projects", null)
                         .WithMany()

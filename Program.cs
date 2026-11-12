@@ -49,6 +49,8 @@ builder.Services.AddMySql(
 builder.Services.AddScoped<IAuthServices, AuthServices>();
 builder.Services.AddScoped<IRoleManageServices, RoleManageServices>();
 builder.Services.AddScoped<IProjectServices, ProjectServices>();
+builder.Services.AddScoped<ITaskServices, TaskServices>();
+builder.Services.AddScoped<IDashboardServices, DashboardServices>();
 
 var token = builder.Configuration["AppSettings:Token"]
     ?? throw new InvalidOperationException(
@@ -136,6 +138,13 @@ builder.Services.AddHttpClient<IGitHubService, GitHubService>(
 
         client.DefaultRequestHeaders.Add(
             "X-GitHub-Api-Version", "2026-03-10");
+
+        var githubToken = builder.Configuration["GitHub:Token"];
+        if (!string.IsNullOrWhiteSpace(githubToken))
+        {
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", githubToken);
+        }
 
         client.Timeout = TimeSpan.FromSeconds(15);
     });

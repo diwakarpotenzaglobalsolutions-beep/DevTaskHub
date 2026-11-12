@@ -74,7 +74,7 @@ namespace DevTaskHubBackend.Controllers
         }
 
         [RoleAuthorize(UserRole.Admin)]
-        [HttpPut("Reassign-Project")]
+        [HttpPut("Reassign-Manager-Project")]
         public async Task<IActionResult> ReassignProject([FromBody] ReAsignProjectDto request)
         {
             await _projectServices.ReAsignToProjectAsync(request);
@@ -97,6 +97,20 @@ namespace DevTaskHubBackend.Controllers
             {
                 success=true,
                 message="Developer assigned to project successfully."
+            });
+        }
+
+        [RoleAuthorize(UserRole.Manager)]
+        [HttpPut("Update-Project-Developers")]
+        public async Task<IActionResult> UpdateProjectDevelopers([FromBody] AssignDevelopersDto request, CancellationToken cancellationToken)
+        {
+            Guid currentUserID = User.GetUserId();
+            await _projectServices.AssignDeveloperToProject(request, currentUserID, cancellationToken);
+
+            return Ok(new
+            {
+                success = true,
+                message = "Project developers updated successfully."
             });
         }
 

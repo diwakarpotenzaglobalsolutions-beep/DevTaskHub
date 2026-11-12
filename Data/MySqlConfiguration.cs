@@ -68,6 +68,7 @@ public static class MySqlConfiguration
         if (connectionString.IndexOf("SslMode", StringComparison.OrdinalIgnoreCase) < 0)
         {
             builder.SslMode = MySqlSslMode.Disabled;
+            builder.AllowPublicKeyRetrieval = true;
         }
 
         builder.Pooling = true;

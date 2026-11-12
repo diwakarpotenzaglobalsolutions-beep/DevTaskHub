@@ -232,39 +232,46 @@ public class ProjectServices : IProjectServices
 
 
 
-    public async Task<bool> AssignDeveloperToProject(AssignDevelopersDto assignDevelopersDto, Guid currentUserID, CancellationToken cancellationToken)
+public async Task<bool> AssignDeveloperToProject(AssignDevelopersDto assignDevelopersDto,Guid currentUserID,CancellationToken cancellationToken)
+{
+    var project = await _myDbContext.Projects.FirstOrDefaultAsync(p =>p.ProjectId == assignDevelopersDto.ProjectID && !p.IsDeleted,cancellationToken);
+
+    if (project == null)
+        throw new AppException(StatusCodes.Status404NotFound, "Project not found.");
+
+    var currentUser = await _myDbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserID == currentUserID && u.IsActive && !u.IsDeleted, cancellationToken);
+
+    if (currentUser == null)
+        throw new AppException(StatusCodes.Status403Forbidden, "User account is inactive or not found.");
+
+    bool isAdmin = currentUser.RoleId == UserRole.Admin.ToId();
+
+    if (!isAdmin && project.AssignedToUserId != currentUserID)
+        throw new AppException(StatusCodes.Status403Forbidden, "This project is not assigned to you.");
+
+    var developerIds = assignDevelopersDto.DeveloperIDs.Distinct().ToList();
+
+    var developers = await _myDbContext.Users.AsNoTracking().Where(u => developerIds.Contains(u.UserID) &&u.RoleId == UserRole.Developer.ToId() &&u.IsActive && !u.IsDeleted)
+        .ToListAsync(cancellationToken);
+
+    if (developers.Count != developerIds.Count)
+        throw new AppException(StatusCodes.Status400BadRequest, "One or more selected developers are invalid.");
+
+    var existingMembers = await _myDbContext.ProjectMembers
+        .Where(pm => pm.ProjectId == project.ProjectId)
+        .ToListAsync(cancellationToken);
+
+    var existingDeveloperIds = existingMembers.Select(pm => pm.UserId).ToHashSet();
+    if (developers.Any(d => d.ManagerId != project.AssignedToUserId && !existingDeveloperIds.Contains(d.UserID)))
+        throw new AppException(StatusCodes.Status403Forbidden, "You can only assign developers under this project's manager.");
+
+    var membersToRemove = existingMembers.Where(pm => !developerIds.Contains(pm.UserId)).ToList();
+
+    _myDbContext.ProjectMembers.RemoveRange(membersToRemove);
+
+    foreach (var developer in developers)
     {
-        var project = await _myDbContext.Projects.FirstOrDefaultAsync(p => p.ProjectId == assignDevelopersDto.ProjectID && !p.IsDeleted, cancellationToken);
-
-        if (project == null)
-            throw new AppException(StatusCodes.Status404NotFound, "Project not found.");
-
-        var currentUser = await _myDbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserID == currentUserID && u.IsActive && !u.IsDeleted, cancellationToken);
-
-        if (currentUser == null)
-            throw new AppException(StatusCodes.Status403Forbidden, "User account is inactive or not found.");
-
-        bool isAdmin = currentUser.RoleId == UserRole.Admin.ToId();
-
-        if (!isAdmin && project.AssignedToUserId != currentUserID)
-            throw new AppException(StatusCodes.Status403Forbidden, "This project is not assigned to you.");
-
-        var developerIds = assignDevelopersDto.DeveloperIDs.Distinct().ToList();
-
-        var developers = await _myDbContext.Users.AsNoTracking().Where(u => developerIds.Contains(u.UserID) && u.RoleId == UserRole.Developer.ToId() && u.IsActive && !u.IsDeleted).ToListAsync(cancellationToken);
-
-        if (developers.Count != developerIds.Count)
-            throw new AppException(StatusCodes.Status400BadRequest, "One or more selected developers are invalid.");
-
-        if (developers.Any(d => d.ManagerId != project.AssignedToUserId))
-            throw new AppException(StatusCodes.Status403Forbidden, "You can only assign developers under this project's manager.");
-
-        bool exists = await _myDbContext.ProjectMembers.AnyAsync(pm => pm.ProjectId == project.ProjectId && developerIds.Contains(pm.UserId), cancellationToken);
-
-        if (exists)
-            throw new AppException(StatusCodes.Status409Conflict, "One or more developers are already assigned.");
-
-        foreach (var developer in developers)
+        if (!existingDeveloperIds.Contains(developer.UserID))
         {
             _myDbContext.ProjectMembers.Add(new ProjectMember
             {
@@ -273,11 +280,12 @@ public class ProjectServices : IProjectServices
                 UserId = developer.UserID
             });
         }
-
-        await _myDbContext.SaveChangesAsync(cancellationToken);
-
-        return true;
     }
+
+    await _myDbContext.SaveChangesAsync(cancellationToken);
+
+    return true;
+}
 
     public async Task<List<ProjectDevloperDto>> GetProjectDevelopersAsync(Guid projectID, Guid currentUserID, CancellationToken cancellationToken)
     {
@@ -315,20 +323,17 @@ public class ProjectServices : IProjectServices
         }
 
         return await _myDbContext.ProjectMembers.AsNoTracking()
-            .Where(member => member.ProjectId == projectID)
-            .Join(
+            .Where(member => member.ProjectId == projectID).Join(
                 _myDbContext.Users,
                 member => member.UserId,
                 user => user.UserID,
                 (member, user) => user)
-            .Where(user => user.RoleId == UserRole.Developer.ToId() &&
-                           user.IsActive && !user.IsDeleted)
+            .Where(user => user.RoleId == UserRole.Developer.ToId() && user.IsActive && !user.IsDeleted)
             .OrderBy(user => user.FullName)
             .Select(user => new ProjectDevloperDto
             {
                 UserId = user.UserID,
                 FullName = user.FullName,
-                Email = user.Email,
                 GitHubAvatarUrl = user.GitHubAvatarUrl
             })
             .ToListAsync(cancellationToken);
