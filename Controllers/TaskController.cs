@@ -34,10 +34,10 @@ namespace DevTaskHubBackend.Controllers
         }
         [RoleAuthorize(UserRole.Manager, UserRole.Developer)]
         [HttpPost("Get-All-Tasks")]
-        public async Task<IActionResult> GetAllTask(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetAllTask([FromQuery] string? search, [FromQuery] string? status, [FromQuery] string? priority, [FromQuery] Guid? projectId, [FromQuery] string? sortBy, [FromQuery] string? sortOrder, CancellationToken cancellationToken)
         {
             Guid currentUserID = User.GetUserId();
-            var result = await _taskServices.GetTaskAsync(currentUserID, cancellationToken);
+            var result = await _taskServices.GetTaskAsync(currentUserID, search, status, priority, projectId, sortBy, sortOrder, cancellationToken);
             return Ok(new
             {
                 success = true,

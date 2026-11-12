@@ -10,7 +10,7 @@ namespace DevTaskHubBackend.Services;
 public interface ITaskServices
 {
     Task<bool> CreateTaskAsync(CreateTaskDto createTaskDto, Guid currentUserID, CancellationToken cancellationToken = default);
-    Task<List<GetTaskResponseDto>> GetTaskAsync(Guid currentUserID, CancellationToken cancellationToken = default);
+    Task<List<GetTaskResponseDto>> GetTaskAsync(Guid currentUserID, string? search, string? status, string? priority, Guid? projectId, string? sortBy, string? sortOrder, CancellationToken cancellationToken = default);
 
     Task<bool> EditTaskAsync(Guid taskID, EditTaskDto editTaskDto, Guid currentUserID, CancellationToken cancellationToken = default);
 
@@ -65,7 +65,7 @@ public class TaskServices : ITaskServices
         return true;
     }
 
-    public async Task<List<GetTaskResponseDto>> GetTaskAsync(Guid currentUserID, CancellationToken cancellationToken)
+    public async Task<List<GetTaskResponseDto>> GetTaskAsync(Guid currentUserID, string? search, string? status, string? priority, Guid? projectId, string? sortBy, string? sortOrder, CancellationToken cancellationToken)
     {
         var currentUser = await _mySqlDbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserID == currentUserID && u.IsActive && !u.IsDeleted, cancellationToken);
         if (currentUser == null)
@@ -93,8 +93,51 @@ public class TaskServices : ITaskServices
         {
             throw new AppException(StatusCodes.Status403Forbidden, "Access denied.");
         }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            query = query.Where(task => task.Title.Contains(term));
+        }
+
+        if (projectId is Guid selectedProjectId && selectedProjectId != Guid.Empty)
+        {
+            query = query.Where(task => task.ProjectId == selectedProjectId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (!Enum.TryParse<Data.TaskStatus>(status.Trim(), true, out var taskStatus) || !Enum.IsDefined(taskStatus))
+            {
+                throw new AppException(StatusCodes.Status400BadRequest, "Invalid task status.");
+            }
+
+            var statusName = taskStatus.ToString();
+            query = query.Where(task => task.Status == statusName);
+        }
+
+        if (!string.IsNullOrWhiteSpace(priority))
+        {
+            if (!Enum.TryParse<TaskPriority>(priority.Trim(), true, out var taskPriority) || !Enum.IsDefined(taskPriority))
+            {
+                throw new AppException(StatusCodes.Status400BadRequest, "Invalid task priority.");
+            }
+
+            var priorityName = taskPriority.ToString();
+            query = query.Where(task => task.Priority == priorityName);
+        }
+
+        var descending = !string.Equals(sortOrder, "asc", StringComparison.OrdinalIgnoreCase);
+        query = sortBy?.Trim().ToLowerInvariant() switch
+        {
+            "title" => descending ? query.OrderByDescending(task => task.Title) : query.OrderBy(task => task.Title),
+            "status" => descending ? query.OrderByDescending(task => task.Status) : query.OrderBy(task => task.Status),
+            "priority" => descending ? query.OrderByDescending(task => task.Priority) : query.OrderBy(task => task.Priority),
+            "duedate" => descending ? query.OrderByDescending(task => task.DueDate) : query.OrderBy(task => task.DueDate),
+            _ => descending ? query.OrderByDescending(task => task.CreatedAt) : query.OrderBy(task => task.CreatedAt)
+        };
+
         return await query
-            .OrderByDescending(t => t.CreatedAt)
             .Select(t => new GetTaskResponseDto
             {
                 TaskID = t.TaskId,
