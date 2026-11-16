@@ -8,7 +8,7 @@ Phone ya emulator se `localhost` computer ka nahi hota.
 
 - Android emulator: `http://10.0.2.2:5187`
 - iOS simulator: `http://localhost:5187`
-- Real phone: `http://<computer-lan-ip>:5187`
+- Real phone: `http://<computer-lan-ip>:5187` (API `0.0.0.0:5187` par listen kare, sirf localhost par nahi)
 
 Swagger: `http://localhost:5187/swagger`
 
@@ -354,6 +354,54 @@ Admin, Manager, Developer.
 
 `status`: `0` ToDo, `1` InProgress, `2` InReview, `3` Done, `4` Blocked.
 
+### GET `/api/Task/Get-Task-Details/{taskID}`
+
+Admin, Manager, Developer. Body nahi. Task ke saath uske saare comments aate hain.
+
+`data.comments[]`: `taskCommentId`, `taskId`, `userId`, `userName`, `comment`, `createdAt`, `updatedAt`.
+
+### POST `/api/Task/Add-Comment/{taskID}`
+
+Admin, Manager, Developer. Naya comment `TaskComments` table mein save hota hai.
+
+```json
+{
+  "comment": "API response check kar lo"
+}
+```
+
+`comment` required, maximum 2000 characters. Purana `PUT /api/Task/Update-Task-Comment/{taskID}` bhi yahi kaam karta hai.
+
+### PUT `/api/Task/Edit-Comment/{commentId}`
+
+Comment ka author ya Admin. Body same hai: `{ "comment": "updated text" }`.
+
+### DELETE `/api/Task/Delete-Comment/{commentId}`
+
+Comment ka author ya Admin. Body nahi. Comment soft delete hota hai.
+
+## Project log
+
+Project par jo bhi hota hai uska record `ActivityLogs` table mein jata hai: project create/update/delete, manager reassign, developer add/remove, task create/update/assign/status, comment add/edit/delete, GitHub repository link/unlink, aur pull request sync.
+
+### GET `/api/Log/Get-Logs`
+
+Admin, Manager, Developer. Body nahi.
+
+Query: `page` (default 1), `pageSize` (default 20, max 100), `projectId` optional, `taskId` optional.
+
+Example: `/api/Log/Get-Logs?page=1&pageSize=20&projectId=<guid>`
+
+Kaun kya dekhta hai:
+
+- Admin: saare projects ki saari activity.
+- Manager: sirf apne assigned projects, aur apni team ke log.
+- Developer: sirf apni activity, apne task par hui activity, aur jahan woh khud target hai.
+
+`data.items[]`: `activityLogId`, `projectId`, `projectName`, `taskId`, `taskTitle`, `userId`, `userName`, `action`, `message`, `createdAt`.
+
+`data` mein `page`, `pageSize`, `totalCount`, `totalPages` bhi aate hain.
+
 ## Dashboard
 
 ### GET `/api/Dashboard/Get-Dashboard`
@@ -386,7 +434,7 @@ Admin, Manager, Developer. Body nahi. Saved GitHub profile.
 
 ### POST `/api/github/Verify-Profile`
 
-Admin, Manager, Developer. Body nahi. Saved username ko GitHub par dubara check karke photo aur URL refresh karta hai.
+Admin, Manager, Developer. Body nahi. Saved public profile refresh hota hai. Username lookup ownership verify nahi karta. `ownershipVerified` tab tak `false` rehta hai jab tak GitHub OAuth ya GitHub App na lagao.
 
 ### DELETE `/api/github/Unlink-Profile`
 
@@ -414,19 +462,41 @@ Admin, Manager, Developer. Body nahi.
 
 Admin aur Manager. Body nahi. Sirf repo link hatata hai, tasks nahi.
 
+### PUT `/api/github/Link-PullRequest/{taskId}`
+
+Admin: kisi bhi active project. Manager: sirf apne assigned project. Developer: sirf task jo usi developer ko assigned hai.
+
+```json
+{
+  "pullRequestUrl": "https://github.com/example-org/devtaskhub/pull/15"
+}
+```
+
+`data`: `taskId`, `number`, `title`, `status`, `draft`, `author`, `url`, `createdAt`, `updatedAt`, `mergedAt`, `lastSyncedAt`, `linked`.
+
+Task ka `status`, priority, assignment aur description nahi badalta. Ek task par ek PR. Dusre repository ka PR reject hota hai.
+
+### GET `/api/github/Get-Repositories/{username}?page=1&pageSize=30`
+
+Admin, Manager, Developer. Sirf public repositories. `data`: `items`, `page`, `pageSize`, `hasNextPage`.
+
+Item: `name`, `fullName`, `owner`, `url`, `description`, `visibility`, `defaultBranch`.
+
 ### POST `/api/github/Sync-PullRequests/{projectId}`
 
-Admin, Manager, Developer. Body nahi. Latest 50 pull requests tasks mein save karta hai.
+Admin, Manager, Developer. Body nahi. Jo tasks pehle se PR se linked hain, unke GitHub fields update hote hain. Naya task nahi banta aur task status nahi badalta.
 
-`data`: `created`, `updated`, `pullRequests`.
+`data`: `created` hamesha `0`, `updated`, `skipped`, `pullRequests`.
 
-### GET `/api/github/PullRequests/{projectId}`
+### GET `/api/github/PullRequests/{projectId}?page=1&pageSize=30&status=Open`
 
-Admin, Manager, Developer. Body nahi. Us project ki saved pull requests.
+Admin, Manager, Developer. Linked repository ki live pull requests. `status` optional: `Open`, `Draft`, `Merged`, `Closed`.
 
-Item: `taskId`, `number`, `title`, `status`, `url`, `lastSyncedAt`, `assignedToUserId`, `assignedToName`.
+`data`: `items`, `page`, `pageSize`, `hasNextPage`.
 
-`status`: `Open`, `Merged`, `Closed`.
+Item: `taskId`, `number`, `title`, `status`, `draft`, `author`, `url`, `createdAt`, `updatedAt`, `mergedAt`, `lastSyncedAt`, `assignedToUserId`, `assignedToName`, `linked`.
+
+`status`: `Open`, `Draft`, `Merged`, `Closed`. `Closed` sirf unmerged closed PR hai. `Merged` alag hai.
 
 ### GET `/api/github/Live-PullRequests`
 

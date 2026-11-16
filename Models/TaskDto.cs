@@ -46,6 +46,7 @@ public class GetTaskResponseDto
     public int? GitHubPRNumber { get; set; }
     public string? GitHubPRStatus { get; set; }
     public string? GitHubPRUrl { get; set; }
+    public string? Comment { get; set; }
 }
 
 public class EditTaskDto
@@ -73,4 +74,27 @@ public class AssignTaskDto
     [Required]
     [EnumDataType(typeof(TaskStatusEnum))]
     public TaskStatusEnum Status { get; set; }
+}
+
+public class UpdateTaskCommentDto
+{
+    [Required]
+    [StringLength(2000)]
+    public string Comment { get; set; } = string.Empty;
+}
+
+public class TaskCommentDto
+{
+    public Guid TaskCommentId { get; set; }
+    public Guid TaskId { get; set; }
+    public Guid UserId { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public string Comment { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+public class TaskDetailsDto : GetTaskResponseDto
+{
+    public List<TaskCommentDto> Comments { get; set; } = [];
 }

@@ -20,6 +20,8 @@ public class MySqlDbContext : MyDbContext
         ConfigureProjects(modelBuilder);
         ConfigureTasks(modelBuilder);
         ConfigureProjectMembers(modelBuilder);
+        ConfigureTaskComments(modelBuilder);
+        ConfigureActivityLogs(modelBuilder);
         ConfigureAuditColumns(modelBuilder);
         UseUuid7Keys(modelBuilder);
         base.OnModelCreating(modelBuilder);
@@ -49,7 +51,7 @@ public class MySqlDbContext : MyDbContext
         entity.Property(user => user.Email)
             .HasMaxLength(254)
             .IsRequired()
-            .ForMySQLHasCollation("utf8mb4_0900_ai_ci");
+            .ForMySQLHasCollation("utf8mb4_unicode_ci");
         entity.Property(user => user.PhoneNumber).HasMaxLength(32);
         entity.Property(user => user.PasswordHash).HasMaxLength(500).IsRequired();
         entity.Property(user => user.GitHubUserName).HasMaxLength(39);
@@ -106,6 +108,7 @@ public class MySqlDbContext : MyDbContext
         entity.HasQueryFilter(task => !task.IsDeleted);
         entity.Property(task => task.Title).HasMaxLength(200).IsRequired();
         entity.Property(task => task.TaskSummery).HasMaxLength(4000);
+        entity.Property(task => task.Comment).HasMaxLength(2000);
         entity.Property(task => task.Status).HasMaxLength(20).IsRequired().HasDefaultValue(nameof(TaskStatus.ToDo));
         entity.Property(task => task.Priority).HasMaxLength(20).IsRequired().HasDefaultValue(nameof(TaskPriority.Medium));
         entity.Property(task => task.GitHubPRStatus).HasMaxLength(20);
@@ -142,6 +145,34 @@ public class MySqlDbContext : MyDbContext
         entity.HasIndex(member => new { member.UserId, member.ProjectId }).HasDatabaseName("IX_ProjectMembers_User_Project");
         entity.HasOne<Projects>().WithMany().HasForeignKey(member => member.ProjectId).OnDelete(DeleteBehavior.Cascade);
         entity.HasOne<User>().WithMany().HasForeignKey(member => member.UserId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureTaskComments(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<TaskComment>();
+        entity.HasQueryFilter(comment => !comment.IsDeleted);
+        entity.Property(comment => comment.Comment).HasMaxLength(2000).IsRequired();
+        entity.Property(comment => comment.IsDeleted).HasDefaultValue(false);
+        entity.HasIndex(comment => new { comment.TaskId, comment.CreatedAt }).HasDatabaseName("IX_TaskComments_Task_Created");
+        entity.HasIndex(comment => comment.UserId).HasDatabaseName("IX_TaskComments_User");
+        entity.HasOne<Tasks>().WithMany().HasForeignKey(comment => comment.TaskId).OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne<User>().WithMany().HasForeignKey(comment => comment.UserId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureActivityLogs(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<ActivityLog>();
+        entity.Property(log => log.ProjectName).HasMaxLength(150).IsRequired();
+        entity.Property(log => log.TaskTitle).HasMaxLength(200);
+        entity.Property(log => log.UserName).HasMaxLength(120).IsRequired();
+        entity.Property(log => log.Action).HasMaxLength(40).IsRequired();
+        entity.Property(log => log.Message).HasMaxLength(500).IsRequired();
+        entity.HasIndex(log => new { log.ProjectId, log.CreatedAt }).HasDatabaseName("IX_ActivityLogs_Project_Created");
+        entity.HasIndex(log => new { log.UserId, log.CreatedAt }).HasDatabaseName("IX_ActivityLogs_User_Created");
+        entity.HasIndex(log => log.TargetUserId).HasDatabaseName("IX_ActivityLogs_TargetUser");
+        entity.HasOne<Projects>().WithMany().HasForeignKey(log => log.ProjectId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<User>().WithMany().HasForeignKey(log => log.UserId).OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne<User>().WithMany().HasForeignKey(log => log.TargetUserId).OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureAuditColumns(ModelBuilder modelBuilder)

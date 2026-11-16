@@ -16,15 +16,21 @@ public interface ITaskServices
 
     Task<bool> AssignTaskAsync(AssignTaskDto assignTaskDto, Guid currentUserID, CancellationToken cancellationToken = default);
     Task<bool> UpdateTaskStatusAsync(Guid taskID, UpdateTaskStatusDto dto, Guid currentUserID, CancellationToken cancellationToken);
+    Task<bool> AddTaskCommentAsync(Guid currentUserID, Guid taskID, UpdateTaskCommentDto updateTaskCommentDto, CancellationToken cancellationToken=default);
+    Task<TaskDetailsDto> GetTaskDetailsAsync(Guid currentUserID, Guid taskID, CancellationToken cancellationToken = default);
+    Task<bool> EditTaskCommentAsync(Guid currentUserID, Guid commentId, UpdateTaskCommentDto request, CancellationToken cancellationToken = default);
+    Task<bool> DeleteTaskCommentAsync(Guid currentUserID, Guid commentId, CancellationToken cancellationToken = default);
 }
 
 public class TaskServices : ITaskServices
 {
     private readonly MySqlDbContext _mySqlDbContext;
+    private readonly IActivityLogService _activityLogService;
 
-    public TaskServices(MySqlDbContext mySqlDbContext)
+    public TaskServices(MySqlDbContext mySqlDbContext, IActivityLogService activityLogService)
     {
         _mySqlDbContext = mySqlDbContext;
+        _activityLogService = activityLogService;
     }
 
     public async Task<bool> CreateTaskAsync(CreateTaskDto createTaskDto, Guid currentUserID, CancellationToken cancellationToken)
@@ -61,6 +67,7 @@ public class TaskServices : ITaskServices
         };
 
         await _mySqlDbContext.Tasks.AddAsync(task);
+        _activityLogService.Add(project.ProjectId, project.ProjectName, currentUser.UserID, currentUser.FullName, "TaskCreated", $"{currentUser.FullName} created task \"{task.Title}\" in project \"{project.ProjectName}\".", task.TaskId, task.Title);
         await _mySqlDbContext.SaveChangesAsync(cancellationToken);
         return true;
     }
@@ -155,7 +162,9 @@ public class TaskServices : ITaskServices
                 CreatedAt = t.CreatedAt,
                 GitHubPRNumber = t.GitHubPRNumber,
                 GitHubPRStatus = t.GitHubPRStatus,
-                GitHubPRUrl = t.GitHubPRUrl
+                GitHubPRUrl = t.GitHubPRUrl,
+                Comment=t.Comment
+                
             })
             .ToListAsync(cancellationToken);
 
@@ -191,6 +200,7 @@ public class TaskServices : ITaskServices
         task.Priority = editTaskDto.Priority.ToString();
         task.DueDate = editTaskDto.DueDate;
         task.UpdatedAt = DateTime.UtcNow;
+        _activityLogService.Add(project.ProjectId, project.ProjectName, currentUser.UserID, currentUser.FullName, "TaskUpdated", $"{currentUser.FullName} updated task \"{task.Title}\" in project \"{project.ProjectName}\".", task.TaskId, task.Title);
 
         await _mySqlDbContext.SaveChangesAsync(cancellationToken);
 
@@ -235,6 +245,7 @@ public class TaskServices : ITaskServices
 
         task.AssignedToUserId = developer.UserID;
         task.UpdatedAt = DateTime.UtcNow;
+        _activityLogService.Add(project.ProjectId, project.ProjectName, currentUser.UserID, currentUser.FullName, "TaskAssigned", $"{currentUser.FullName} assigned task \"{task.Title}\" to {developer.FullName}.", task.TaskId, task.Title, developer.UserID);
 
         await _mySqlDbContext.SaveChangesAsync(cancellationToken);
 
@@ -276,9 +287,167 @@ public class TaskServices : ITaskServices
 
         task.Status = dto.Status.ToString();
         task.UpdatedAt = DateTime.UtcNow;
+        _activityLogService.Add(project.ProjectId, project.ProjectName, currentUser.UserID, currentUser.FullName, "TaskStatusChanged", $"{currentUser.FullName} changed task \"{task.Title}\" status to {task.Status}.", task.TaskId, task.Title, task.AssignedToUserId);
 
         await _mySqlDbContext.SaveChangesAsync(cancellationToken);
 
         return true;
+    }
+
+    public async Task<bool> AddTaskCommentAsync(Guid currentUserID, Guid taskID, UpdateTaskCommentDto updateTaskCommentDto, CancellationToken cancellationToken)
+    {
+        var (user, task, project) = await RequireTaskAccessAsync(currentUserID, taskID, cancellationToken);
+        var text = RequireCommentText(updateTaskCommentDto.Comment);
+        var comment = new TaskComment
+        {
+            TaskCommentId = Guid.CreateVersion7(),
+            TaskId = task.TaskId,
+            UserId = user.UserID,
+            Comment = text
+        };
+        await _mySqlDbContext.TaskComments.AddAsync(comment, cancellationToken);
+        _activityLogService.Add(project.ProjectId, project.ProjectName, user.UserID, user.FullName, "CommentAdded", $"{user.FullName} commented on task \"{task.Title}\".", task.TaskId, task.Title, task.AssignedToUserId);
+        await _mySqlDbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<TaskDetailsDto> GetTaskDetailsAsync(Guid currentUserID, Guid taskID, CancellationToken cancellationToken)
+    {
+        var (_, task, _) = await RequireTaskAccessAsync(currentUserID, taskID, cancellationToken);
+        var details = await _mySqlDbContext.Tasks.AsNoTracking()
+            .Where(item => item.TaskId == task.TaskId)
+            .Select(item => new TaskDetailsDto
+            {
+                TaskID = item.TaskId,
+                ProjectID = item.ProjectId,
+                ProjectName = _mySqlDbContext.Projects.Where(project => project.ProjectId == item.ProjectId).Select(project => project.ProjectName).FirstOrDefault() ?? string.Empty,
+                Title = item.Title,
+                TaskSummary = item.TaskSummery,
+                Status = item.Status,
+                Priority = item.Priority,
+                AssignedToUserId = item.AssignedToUserId,
+                AssignedToName = item.AssignedToUserId == null ? null : _mySqlDbContext.Users.Where(person => person.UserID == item.AssignedToUserId).Select(person => person.FullName).FirstOrDefault(),
+                CreatedByUserId = item.CreatedByUserId,
+                CreatedByName = _mySqlDbContext.Users.Where(person => person.UserID == item.CreatedByUserId).Select(person => person.FullName).FirstOrDefault() ?? string.Empty,
+                DueDate = item.DueDate,
+                CreatedAt = item.CreatedAt,
+                GitHubPRNumber = item.GitHubPRNumber,
+                GitHubPRStatus = item.GitHubPRStatus,
+                GitHubPRUrl = item.GitHubPRUrl
+            })
+            .FirstAsync(cancellationToken);
+
+        details.Comments = await ListCommentsAsync(task.TaskId, cancellationToken);
+        return details;
+    }
+
+    public async Task<bool> EditTaskCommentAsync(Guid currentUserID, Guid commentId, UpdateTaskCommentDto request, CancellationToken cancellationToken)
+    {
+        var comment = await GetActiveCommentAsync(commentId, cancellationToken);
+        var (user, task, project) = await RequireTaskAccessAsync(currentUserID, comment.TaskId, cancellationToken);
+        if (comment.UserId != user.UserID && user.RoleId != UserRole.Admin.ToId())
+        {
+            throw new AppException(StatusCodes.Status403Forbidden, "You can only edit your own comment.");
+        }
+
+        var text = RequireCommentText(request.Comment);
+        comment.Comment = text;
+        comment.UpdatedAt = DateTime.UtcNow;
+        _activityLogService.Add(project.ProjectId, project.ProjectName, user.UserID, user.FullName, "CommentEdited", $"{user.FullName} edited a comment on task \"{task.Title}\".", task.TaskId, task.Title, task.AssignedToUserId);
+        await _mySqlDbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> DeleteTaskCommentAsync(Guid currentUserID, Guid commentId, CancellationToken cancellationToken)
+    {
+        var comment = await GetActiveCommentAsync(commentId, cancellationToken);
+        var (user, task, project) = await RequireTaskAccessAsync(currentUserID, comment.TaskId, cancellationToken);
+        if (comment.UserId != user.UserID && user.RoleId != UserRole.Admin.ToId())
+        {
+            throw new AppException(StatusCodes.Status403Forbidden, "You can only delete your own comment.");
+        }
+
+        comment.IsDeleted = true;
+        comment.UpdatedAt = DateTime.UtcNow;
+        _activityLogService.Add(project.ProjectId, project.ProjectName, user.UserID, user.FullName, "CommentDeleted", $"{user.FullName} deleted a comment on task \"{task.Title}\".", task.TaskId, task.Title, task.AssignedToUserId);
+        await _mySqlDbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    private async Task<(User User, Tasks Task, Projects Project)> RequireTaskAccessAsync(Guid userId, Guid taskId, CancellationToken cancellationToken)
+    {
+        var task = await _mySqlDbContext.Tasks.FirstOrDefaultAsync(item => item.TaskId == taskId && !item.IsDeleted, cancellationToken);
+        if (task == null)
+        {
+            throw new AppException(StatusCodes.Status404NotFound, "Task not found.");
+        }
+
+        var project = await _mySqlDbContext.Projects.AsNoTracking().FirstOrDefaultAsync(item => item.ProjectId == task.ProjectId && !item.IsDeleted, cancellationToken);
+        if (project == null)
+        {
+            throw new AppException(StatusCodes.Status404NotFound, "Project not found.");
+        }
+
+        var user = await _mySqlDbContext.Users.AsNoTracking().FirstOrDefaultAsync(item => item.UserID == userId && item.IsActive && !item.IsDeleted, cancellationToken);
+        if (user == null)
+        {
+            throw new AppException(StatusCodes.Status403Forbidden, "User not found or inactive.");
+        }
+
+        var isAdmin = user.RoleId == UserRole.Admin.ToId();
+        var isManager = user.RoleId == UserRole.Manager.ToId() && project.AssignedToUserId == userId;
+        var isDeveloper = user.RoleId == UserRole.Developer.ToId() && task.AssignedToUserId == userId;
+        if (!isAdmin && !isManager && !isDeveloper)
+        {
+            throw new AppException(StatusCodes.Status403Forbidden, "You cannot access this task.");
+        }
+
+        return (user, task, project);
+    }
+
+    private async Task<TaskComment> GetActiveCommentAsync(Guid commentId, CancellationToken cancellationToken)
+    {
+        var comment = await _mySqlDbContext.TaskComments.FirstOrDefaultAsync(item => item.TaskCommentId == commentId, cancellationToken);
+        if (comment == null)
+        {
+            throw new AppException(StatusCodes.Status404NotFound, "Comment not found.");
+        }
+
+        return comment;
+    }
+
+    private async Task<List<TaskCommentDto>> ListCommentsAsync(Guid taskId, CancellationToken cancellationToken)
+    {
+        return await (
+            from comment in _mySqlDbContext.TaskComments.AsNoTracking()
+            join user in _mySqlDbContext.Users.AsNoTracking() on comment.UserId equals user.UserID
+            where comment.TaskId == taskId
+            orderby comment.CreatedAt
+            select new TaskCommentDto
+            {
+                TaskCommentId = comment.TaskCommentId,
+                TaskId = comment.TaskId,
+                UserId = comment.UserId,
+                UserName = user.FullName,
+                Comment = comment.Comment,
+                CreatedAt = comment.CreatedAt,
+                UpdatedAt = comment.UpdatedAt
+            }).ToListAsync(cancellationToken);
+    }
+
+    private static string RequireCommentText(string? comment)
+    {
+        var text = comment?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            throw new AppException(StatusCodes.Status400BadRequest, "Comment is required.");
+        }
+
+        if (text.Length > 2000)
+        {
+            throw new AppException(StatusCodes.Status400BadRequest, "Comment cannot exceed 2000 characters.");
+        }
+
+        return text;
     }
 }

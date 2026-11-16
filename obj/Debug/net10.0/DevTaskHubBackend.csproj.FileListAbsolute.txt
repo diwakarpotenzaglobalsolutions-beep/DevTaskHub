@@ -379,3 +379,10 @@
 /Users/apple/Desktop/DevTaskCRM/DevTaskHub/obj/Debug/net10.0/DevTaskHubBackend.pdb
 /Users/apple/Desktop/DevTaskCRM/DevTaskHub/obj/Debug/net10.0/DevTaskHubBackend.genruntimeconfig.cache
 /Users/apple/Desktop/DevTaskCRM/DevTaskHub/obj/Debug/net10.0/ref/DevTaskHubBackend.dll
+/Users/apple/Desktop/DevTaskCRM/DevTaskHub/bin/Debug/net10.0/publish/web.config
+/Users/apple/Desktop/DevTaskCRM/DevTaskHub/bin/Debug/net10.0/appsettings.Production.json
+/Users/apple/Desktop/DevTaskCRM/DevTaskHub/bin/Debug/net10.0/publish/appsettings.json
+/Users/apple/Desktop/DevTaskCRM/DevTaskHub/bin/Debug/net10.0/publish/appsettings.Production.json
+/Users/apple/Desktop/DevTaskCRM/DevTaskHub/bin/Debug/net10.0/publish/DevTaskHubBackend.deps.json
+/Users/apple/Desktop/DevTaskCRM/DevTaskHub/bin/Debug/net10.0/publish/DevTaskHubBackend.runtimeconfig.json
+/Users/apple/Desktop/DevTaskCRM/DevTaskHub/bin/Debug/net10.0/publish/DevTaskHubBackend.staticwebassets.endpoints.json

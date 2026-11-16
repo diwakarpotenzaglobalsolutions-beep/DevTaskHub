@@ -52,7 +52,7 @@ public class AuthServices : IAuthServices
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
         var tokenDescriptor = new JwtSecurityToken(
             issuer: _configuration.GetValue<string>("AppSettings:Issuer"),
-            audience: _configuration.GetValue<string>("AppSettings:audience"),
+            audience: _configuration.GetValue<string>("AppSettings:Audience"),
             claims: claims,
             expires: DateTime.UtcNow.AddHours(1),
             signingCredentials: creds

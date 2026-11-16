@@ -1,10 +1,14 @@
 
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Text;
 using DevTaskHubBackend.Data;
 using DevTaskHubBackend.Middleware;
 using DevTaskHubBackend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
@@ -51,6 +55,7 @@ builder.Services.AddScoped<IRoleManageServices, RoleManageServices>();
 builder.Services.AddScoped<IProjectServices, ProjectServices>();
 builder.Services.AddScoped<ITaskServices, TaskServices>();
 builder.Services.AddScoped<IDashboardServices, DashboardServices>();
+builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 
 var token = builder.Configuration["AppSettings:Token"]
     ?? throw new InvalidOperationException(
@@ -104,27 +109,35 @@ builder.Services.AddAuthorization(options =>
 });
 
 
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+if (!builder.Environment.IsDevelopment() && allowedOrigins.All(string.IsNullOrWhiteSpace))
+{
+    throw new InvalidOperationException(
+        "Cors:AllowedOrigins is missing. Set the production frontend origin in appsettings.Production.json or Cors__AllowedOrigins__0.");
+}
+
+var forwardedHeadersEnabled = builder.Configuration.GetValue("ForwardedHeaders:Enabled", false);
+if (forwardedHeadersEnabled)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-        policy.SetIsOriginAllowed(origin =>
-        {
-            if (!Uri.TryCreate(
-                origin,
-                UriKind.Absolute,
-                out var uri))
-            {
-                return false;
-            }
-
-            return uri.Host is "localhost" or "127.0.0.1";
-        })
+        policy.SetIsOriginAllowed(origin => IsAllowedFrontendOrigin(origin, builder.Environment.IsDevelopment(), allowedOrigins))
         .AllowAnyHeader()
         .AllowAnyMethod();
     });
 });
 
+builder.Services.AddSingleton<IGitHubOwnershipVerifier, PublicProfileGitHubOwnershipVerifier>();
 builder.Services.AddHttpClient<IGitHubService, GitHubService>(
     client =>
     {
@@ -151,27 +164,51 @@ builder.Services.AddHttpClient<IGitHubService, GitHubService>(
 
 var app = builder.Build();
 
+if (forwardedHeadersEnabled)
+{
+    app.UseForwardedHeaders();
+}
+
 // Global Exception Middleware
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-// Swagger
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    app.UseSwagger();
+    options.SwaggerEndpoint(
+        "/swagger/v1/swagger.json",
+        "DevTaskHub API v1");
 
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint(
-            "/swagger/v1/swagger.json",
-            "DevTaskHub API v1");
+    options.RoutePrefix = "swagger";
+    options.EnablePersistAuthorization();
+});
 
-        options.RoutePrefix = "swagger";
-        options.EnablePersistAuthorization();
-    });
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
 }
 
+if (app.Environment.IsDevelopment())
+{
+    app.Lifetime.ApplicationStarted.Register(() =>
+    {
+        foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+        {
+            if (nic.OperationalStatus != OperationalStatus.Up) continue;
+            foreach (var unicast in nic.GetIPProperties().UnicastAddresses)
+            {
+                var address = unicast.Address;
+                if (address.AddressFamily != AddressFamily.InterNetwork || IPAddress.IsLoopback(address))
+                {
+                    continue;
+                }
 
-app.UseHttpsRedirection();
+                Console.WriteLine($"DevTaskHub phone URL: http://{address}:5187");
+            }
+        }
+    });
+}
 
 
 app.UseCors("Frontend");
@@ -186,3 +223,34 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+static bool IsAllowedFrontendOrigin(string origin, bool isDevelopment, string[] allowedOrigins)
+{
+    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+    {
+        return false;
+    }
+
+    if (isDevelopment && uri.Host is "localhost" or "127.0.0.1")
+    {
+        return true;
+    }
+
+    foreach (var allowedOrigin in allowedOrigins)
+    {
+        if (string.IsNullOrWhiteSpace(allowedOrigin)
+            || !Uri.TryCreate(allowedOrigin.Trim(), UriKind.Absolute, out var allowed))
+        {
+            continue;
+        }
+
+        if (string.Equals(allowed.Scheme, uri.Scheme, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(allowed.Host, uri.Host, StringComparison.OrdinalIgnoreCase)
+            && allowed.Port == uri.Port)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}

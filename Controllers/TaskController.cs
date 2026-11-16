@@ -77,14 +77,78 @@ namespace DevTaskHubBackend.Controllers
 
         [RoleAuthorize(UserRole.Manager, UserRole.Developer)]
         [HttpPut("Update-Task-Status/{taskID:guid}")]
-        public async Task<IActionResult> UpdateTaskStatus([FromRoute] Guid taskID,[FromBody] UpdateTaskStatusDto request,CancellationToken cancellationToken)
+        public async Task<IActionResult> UpdateTaskStatus([FromRoute] Guid taskID, [FromBody] UpdateTaskStatusDto request, CancellationToken cancellationToken)
         {
             Guid currentUserID = User.GetUserId();
-            await _taskServices.UpdateTaskStatusAsync(taskID,request,currentUserID,cancellationToken);
+            await _taskServices.UpdateTaskStatusAsync(taskID, request, currentUserID, cancellationToken);
             return Ok(new
             {
                 Success = true,
                 Message = "Task status updated successfully."
+            });
+        }
+
+        [RoleAuthorize(UserRole.Manager, UserRole.Developer)]
+        [HttpGet("Get-Task-Details/{taskID:guid}")]
+        public async Task<IActionResult> GetTaskDetails(Guid taskID, CancellationToken cancellationToken)
+        {
+            var result = await _taskServices.GetTaskDetailsAsync(User.GetUserId(), taskID, cancellationToken);
+            return Ok(new
+            {
+                Success = true,
+                Message = "Task details retrieved successfully.",
+                Data = result
+            });
+        }
+
+        [RoleAuthorize(UserRole.Manager, UserRole.Developer)]
+        [HttpPost("Add-Comment/{taskID:guid}")]
+        public async Task<IActionResult> AddComment(Guid taskID, [FromBody] UpdateTaskCommentDto request, CancellationToken cancellationToken)
+        {
+            await _taskServices.AddTaskCommentAsync(User.GetUserId(), taskID, request, cancellationToken);
+            return Ok(new
+            {
+                Success = true,
+                Message = "Comment added successfully."
+            });
+        }
+
+        [RoleAuthorize(UserRole.Manager, UserRole.Developer)]
+        [HttpPut("Edit-Comment/{commentId:guid}")]
+        public async Task<IActionResult> EditComment(Guid commentId, [FromBody] UpdateTaskCommentDto request, CancellationToken cancellationToken)
+        {
+            await _taskServices.EditTaskCommentAsync(User.GetUserId(), commentId, request, cancellationToken);
+            return Ok(new
+            {
+                Success = true,
+                Message = "Comment updated successfully."
+            });
+        }
+
+        [RoleAuthorize(UserRole.Manager, UserRole.Developer)]
+        [HttpDelete("Delete-Comment/{commentId:guid}")]
+        public async Task<IActionResult> DeleteComment(Guid commentId, CancellationToken cancellationToken)
+        {
+            await _taskServices.DeleteTaskCommentAsync(User.GetUserId(), commentId, cancellationToken);
+            return Ok(new
+            {
+                Success = true,
+                Message = "Comment deleted successfully."
+            });
+        }
+
+        [RoleAuthorize(UserRole.Manager, UserRole.Developer)]
+        [HttpPut("Update-Task-Comment/{taskID:guid}")]
+        public async Task<IActionResult> UpdateTaskComment([FromRoute] Guid taskID, [FromBody] UpdateTaskCommentDto request, CancellationToken cancellationToken)
+        {
+            Guid currentUserID = User.GetUserId();
+
+            await _taskServices.AddTaskCommentAsync(currentUserID, taskID, request, cancellationToken);
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "Comment added successfully."
             });
         }
     }

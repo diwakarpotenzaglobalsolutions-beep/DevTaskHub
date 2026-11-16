@@ -77,7 +77,7 @@ namespace DevTaskHubBackend.Controllers
         [HttpPut("Reassign-Manager-Project")]
         public async Task<IActionResult> ReassignProject([FromBody] ReAsignProjectDto request)
         {
-            await _projectServices.ReAsignToProjectAsync(request);
+            await _projectServices.ReAsignToProjectAsync(request, User.GetUserId());
 
             return Ok(new
             {

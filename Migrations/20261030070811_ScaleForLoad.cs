@@ -99,7 +99,7 @@ namespace DevTaskHubBackend.Migrations
                 type: "varchar(254)",
                 maxLength: 254,
                 nullable: false,
-                collation: "utf8mb4_0900_ai_ci",
+                collation: "utf8mb4_unicode_ci",
                 oldClrType: typeof(string),
                 oldType: "longtext");
 

@@ -21,10 +21,7 @@ public class GlobalExceptionMiddleware
     private readonly ILogger<GlobalExceptionMiddleware> _logger;
     private readonly IHostEnvironment _environment;
 
-    public GlobalExceptionMiddleware(
-        RequestDelegate next,
-        ILogger<GlobalExceptionMiddleware> logger,
-        IHostEnvironment environment)
+    public GlobalExceptionMiddleware( RequestDelegate next,ILogger<GlobalExceptionMiddleware> logger,IHostEnvironment environment)
     {
         _next = next;
         _logger = logger;

@@ -59,6 +59,70 @@ namespace DevTaskHubBackend.Migrations
                         });
                 });
 
+            modelBuilder.Entity("DevTaskHubBackend.Entities.ActivityLog", b =>
+                {
+                    b.Property<Guid>("ActivityLogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ProjectName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<Guid?>("TargetUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("TaskId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("TaskTitle")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.HasKey("ActivityLogId");
+
+                    b.HasIndex("TargetUserId")
+                        .HasDatabaseName("IX_ActivityLogs_TargetUser");
+
+                    b.HasIndex("ProjectId", "CreatedAt")
+                        .HasDatabaseName("IX_ActivityLogs_Project_Created");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("IX_ActivityLogs_User_Created");
+
+                    b.ToTable("ActivityLogs");
+                });
+
             modelBuilder.Entity("DevTaskHubBackend.Entities.ProjectMember", b =>
                 {
                     b.Property<Guid>("ProjectMemberId")
@@ -169,6 +233,47 @@ namespace DevTaskHubBackend.Migrations
                         });
                 });
 
+            modelBuilder.Entity("DevTaskHubBackend.Entities.TaskComment", b =>
+                {
+                    b.Property<Guid>("TaskCommentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Comment")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false);
+
+                    b.Property<Guid>("TaskId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime(6)")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("TaskCommentId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_TaskComments_User");
+
+                    b.HasIndex("TaskId", "CreatedAt")
+                        .HasDatabaseName("IX_TaskComments_Task_Created");
+
+                    b.ToTable("TaskComments");
+                });
+
             modelBuilder.Entity("DevTaskHubBackend.Entities.Tasks", b =>
                 {
                     b.Property<Guid>("TaskId")
@@ -177,6 +282,10 @@ namespace DevTaskHubBackend.Migrations
 
                     b.Property<Guid?>("AssignedToUserId")
                         .HasColumnType("char(36)");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
@@ -262,7 +371,7 @@ namespace DevTaskHubBackend.Migrations
 
                     b.ToTable("Tasks", t =>
                         {
-                            t.HasCheckConstraint("CK_Tasks_GitHubPRStatus", "(`GitHubPRStatus` IS NULL OR `GitHubPRStatus` IN ('Open', 'Merged', 'Closed'))");
+                            t.HasCheckConstraint("CK_Tasks_GitHubPRStatus", "(`GitHubPRStatus` IS NULL OR `GitHubPRStatus` IN ('Open', 'Draft', 'Merged', 'Closed'))");
 
                             t.HasCheckConstraint("CK_Tasks_Priority", "`Priority` IN ('Low', 'Medium', 'High', 'Critical')");
 
@@ -283,7 +392,7 @@ namespace DevTaskHubBackend.Migrations
                         .IsRequired()
                         .HasMaxLength(254)
                         .HasColumnType("varchar(254)")
-                        .HasAnnotation("MySQL:Collation", "utf8mb4_0900_ai_ci");
+                        .HasAnnotation("MySQL:Collation", "utf8mb4_unicode_ci");
 
                     b.Property<string>("FullName")
                         .IsRequired()
@@ -382,6 +491,26 @@ namespace DevTaskHubBackend.Migrations
                         });
                 });
 
+            modelBuilder.Entity("DevTaskHubBackend.Entities.ActivityLog", b =>
+                {
+                    b.HasOne("DevTaskHubBackend.Entities.Projects", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DevTaskHubBackend.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("TargetUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DevTaskHubBackend.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("DevTaskHubBackend.Entities.ProjectMember", b =>
                 {
                     b.HasOne("DevTaskHubBackend.Entities.Projects", null)
@@ -408,6 +537,21 @@ namespace DevTaskHubBackend.Migrations
                     b.HasOne("DevTaskHubBackend.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DevTaskHubBackend.Entities.TaskComment", b =>
+                {
+                    b.HasOne("DevTaskHubBackend.Entities.Tasks", null)
+                        .WithMany()
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DevTaskHubBackend.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

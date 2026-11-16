@@ -64,7 +64,7 @@ public class GitHubController : ControllerBase
         return Ok(new
         {
             Success = true,
-            Message = "GitHub profile verified and refreshed.",
+            Message = "GitHub public profile refreshed. Ownership is not verified.",
             Data = profile
         });
     }
@@ -127,16 +127,42 @@ public class GitHubController : ControllerBase
         return Ok(new
         {
             Success = true,
-            Message = "GitHub pull requests synced successfully.",
+            Message = "Linked GitHub pull requests synced. New tasks were not created.",
             Data = result
+        });
+    }
+
+    [HttpPut("Link-PullRequest/{taskId:guid}")]
+    [RoleAuthorize(UserRole.Manager, UserRole.Developer)]
+    public async Task<IActionResult> LinkPullRequest(Guid taskId, [FromBody] LinkPullRequestDto request, CancellationToken cancellationToken)
+    {
+        var pullRequest = await _githubService.LinkPullRequestAsync(User.GetUserId(), taskId, request?.PullRequestUrl ?? string.Empty, cancellationToken);
+        return Ok(new
+        {
+            Success = true,
+            Message = "GitHub pull request linked successfully.",
+            Data = pullRequest
+        });
+    }
+
+    [HttpGet("Get-Repositories/{username}")]
+    [RoleAuthorize(UserRole.Manager, UserRole.Developer)]
+    public async Task<IActionResult> GetRepositories(string username, [FromQuery] int page = 1, [FromQuery] int pageSize = 30, CancellationToken cancellationToken = default)
+    {
+        var repositories = await _githubService.GetPublicRepositoriesAsync(username, page, pageSize, cancellationToken);
+        return Ok(new
+        {
+            Success = true,
+            Message = "Public GitHub repositories retrieved successfully.",
+            Data = repositories
         });
     }
 
     [HttpGet("PullRequests/{projectId:guid}")]
     [RoleAuthorize(UserRole.Manager, UserRole.Developer)]
-    public async Task<IActionResult> GetPullRequests(Guid projectId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetPullRequests(Guid projectId, [FromQuery] int page = 1, [FromQuery] int pageSize = 30, [FromQuery] string? status = null, CancellationToken cancellationToken = default)
     {
-        var pullRequests = await _githubService.GetPullRequestsAsync(User.GetUserId(), projectId, cancellationToken);
+        var pullRequests = await _githubService.GetPullRequestsAsync(User.GetUserId(), projectId, page, pageSize, status, cancellationToken);
         return Ok(new
         {
             Success = true,

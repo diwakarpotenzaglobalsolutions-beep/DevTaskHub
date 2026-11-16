@@ -19,6 +19,8 @@ public class Tasks : BaseEntity
 
     public string? TaskSummery { get; set; }
 
+    public string? Comment { get; set; }
+
     public string Status { get; set; } = nameof(TaskStatus.ToDo);
 
     public string Priority { get; set; } = nameof(TaskPriority.Medium);

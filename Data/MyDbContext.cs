@@ -19,4 +19,8 @@ public class MyDbContext:DbContext
         public DbSet<Tasks> Tasks{set;get;}
 
         public DbSet<ProjectMember> ProjectMembers { get; set; }
+
+        public DbSet<TaskComment> TaskComments { get; set; }
+
+        public DbSet<ActivityLog> ActivityLogs { get; set; }
 }
