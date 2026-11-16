@@ -61,7 +61,7 @@ namespace DevTaskHubBackend.Controllers
             return Ok(new
             {
                 success = true,
-                message = "Refresh token successfully.",
+                message = "Get refresh token successfully.",
                 data = result
             });
         }
