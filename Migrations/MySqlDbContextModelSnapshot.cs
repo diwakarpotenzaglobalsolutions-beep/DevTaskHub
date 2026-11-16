@@ -371,7 +371,7 @@ namespace DevTaskHubBackend.Migrations
 
                     b.ToTable("Tasks", t =>
                         {
-                            t.HasCheckConstraint("CK_Tasks_GitHubPRStatus", "(`GitHubPRStatus` IS NULL OR `GitHubPRStatus` IN ('Open', 'Merged', 'Closed'))");
+                            t.HasCheckConstraint("CK_Tasks_GitHubPRStatus", "(`GitHubPRStatus` IS NULL OR `GitHubPRStatus` IN ('Open', 'Draft', 'Merged', 'Closed'))");
 
                             t.HasCheckConstraint("CK_Tasks_Priority", "`Priority` IN ('Low', 'Medium', 'High', 'Critical')");
 

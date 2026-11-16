@@ -137,6 +137,7 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddSingleton<IGitHubOwnershipVerifier, PublicProfileGitHubOwnershipVerifier>();
 builder.Services.AddHttpClient<IGitHubService, GitHubService>(
     client =>
     {

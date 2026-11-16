@@ -65,6 +65,7 @@ public enum ProjectStatus
 public enum PullRequestStatus
 {
     Open,
+    Draft,
     Merged,
     Closed
 }

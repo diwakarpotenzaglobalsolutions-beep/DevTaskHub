@@ -434,7 +434,7 @@ Admin, Manager, Developer. Body nahi. Saved GitHub profile.
 
 ### POST `/api/github/Verify-Profile`
 
-Admin, Manager, Developer. Body nahi. Saved username ko GitHub par dubara check karke photo aur URL refresh karta hai.
+Admin, Manager, Developer. Body nahi. Saved public profile refresh hota hai. Username lookup ownership verify nahi karta. `ownershipVerified` tab tak `false` rehta hai jab tak GitHub OAuth ya GitHub App na lagao.
 
 ### DELETE `/api/github/Unlink-Profile`
 
@@ -462,19 +462,41 @@ Admin, Manager, Developer. Body nahi.
 
 Admin aur Manager. Body nahi. Sirf repo link hatata hai, tasks nahi.
 
+### PUT `/api/github/Link-PullRequest/{taskId}`
+
+Admin: kisi bhi active project. Manager: sirf apne assigned project. Developer: sirf task jo usi developer ko assigned hai.
+
+```json
+{
+  "pullRequestUrl": "https://github.com/example-org/devtaskhub/pull/15"
+}
+```
+
+`data`: `taskId`, `number`, `title`, `status`, `draft`, `author`, `url`, `createdAt`, `updatedAt`, `mergedAt`, `lastSyncedAt`, `linked`.
+
+Task ka `status`, priority, assignment aur description nahi badalta. Ek task par ek PR. Dusre repository ka PR reject hota hai.
+
+### GET `/api/github/Get-Repositories/{username}?page=1&pageSize=30`
+
+Admin, Manager, Developer. Sirf public repositories. `data`: `items`, `page`, `pageSize`, `hasNextPage`.
+
+Item: `name`, `fullName`, `owner`, `url`, `description`, `visibility`, `defaultBranch`.
+
 ### POST `/api/github/Sync-PullRequests/{projectId}`
 
-Admin, Manager, Developer. Body nahi. Latest 50 pull requests tasks mein save karta hai.
+Admin, Manager, Developer. Body nahi. Jo tasks pehle se PR se linked hain, unke GitHub fields update hote hain. Naya task nahi banta aur task status nahi badalta.
 
-`data`: `created`, `updated`, `pullRequests`.
+`data`: `created` hamesha `0`, `updated`, `skipped`, `pullRequests`.
 
-### GET `/api/github/PullRequests/{projectId}`
+### GET `/api/github/PullRequests/{projectId}?page=1&pageSize=30&status=Open`
 
-Admin, Manager, Developer. Body nahi. Us project ki saved pull requests.
+Admin, Manager, Developer. Linked repository ki live pull requests. `status` optional: `Open`, `Draft`, `Merged`, `Closed`.
 
-Item: `taskId`, `number`, `title`, `status`, `url`, `lastSyncedAt`, `assignedToUserId`, `assignedToName`.
+`data`: `items`, `page`, `pageSize`, `hasNextPage`.
 
-`status`: `Open`, `Merged`, `Closed`.
+Item: `taskId`, `number`, `title`, `status`, `draft`, `author`, `url`, `createdAt`, `updatedAt`, `mergedAt`, `lastSyncedAt`, `assignedToUserId`, `assignedToName`, `linked`.
+
+`status`: `Open`, `Draft`, `Merged`, `Closed`. `Closed` sirf unmerged closed PR hai. `Merged` alag hai.
 
 ### GET `/api/github/Live-PullRequests`
 
