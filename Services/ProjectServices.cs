@@ -13,7 +13,7 @@ public interface IProjectServices
     Task<ProjectListDto> GetProjectAsync(Guid currentUserId, int page, int pageSize, string? search, string? status, string? sortBy, string? sortOrder, CancellationToken cancellationToken = default);
     Task<GetProjectResponseDto> EditProjectAsync(Guid projectID, EditProjectDto editProjectDto, Guid currentUserID, CancellationToken cancellationToken = default);
     Task<bool> DeleteProjectAsync(Guid projectId, Guid currentUserId, CancellationToken cancellationToken = default);
-    Task<bool> ReAsignToProjectAsync(ReAsignProjectDto reAsignProjectDto, CancellationToken cancellationToken = default);
+    Task<bool> ReAsignToProjectAsync(ReAsignProjectDto reAsignProjectDto, Guid currentUserId, CancellationToken cancellationToken = default);
     Task<bool> AssignDeveloperToProject(AssignDevelopersDto reAsignProjectDto, Guid currentUserID, CancellationToken cancellationToken = default);
     Task<List<ProjectDevloperDto>> GetProjectDevelopersAsync(Guid projectID, Guid currentUserID, CancellationToken cancellationToken = default);
 }
@@ -22,10 +22,12 @@ public class ProjectServices : IProjectServices
 {
 
     private readonly MySqlDbContext _myDbContext;
+    private readonly IActivityLogService _activityLogService;
 
-    public ProjectServices(MySqlDbContext myDbContext)
+    public ProjectServices(MySqlDbContext myDbContext, IActivityLogService activityLogService)
     {
         _myDbContext = myDbContext;
+        _activityLogService = activityLogService;
     }
 
     public async Task<CreateProjectResponseDto> CreateProjectAsync(Guid userId, CreateProjectDto createProjectDto, CancellationToken cancellationToken)
@@ -48,6 +50,7 @@ public class ProjectServices : IProjectServices
         };
 
         await _myDbContext.Projects.AddAsync(project);
+        _activityLogService.Add(project.ProjectId, project.ProjectName, user.UserID, user.FullName, "ProjectCreated", $"{user.FullName} created project \"{project.ProjectName}\".");
         await _myDbContext.SaveChangesAsync(cancellationToken);
 
         return new CreateProjectResponseDto
@@ -179,6 +182,7 @@ public class ProjectServices : IProjectServices
         project.Description = editProjectDto.Description.Trim();
         project.Status = editProjectDto.Status.ToString();
         project.UpdatedAt = DateTime.UtcNow;
+        _activityLogService.Add(project.ProjectId, project.ProjectName, currentUser.UserID, currentUser.FullName, "ProjectUpdated", $"{currentUser.FullName} updated project \"{project.ProjectName}\".");
 
         await _myDbContext.SaveChangesAsync(cancellationToken);
 
@@ -220,12 +224,13 @@ public class ProjectServices : IProjectServices
         }
         project.IsDeleted = true;
         project.UpdatedAt = DateTime.UtcNow;
+        _activityLogService.Add(project.ProjectId, project.ProjectName, currentUser.UserID, currentUser.FullName, "ProjectDeleted", $"{currentUser.FullName} deleted project \"{project.ProjectName}\".");
         await _myDbContext.SaveChangesAsync(cancellationToken);
 
         return true;
     }
 
-    public async Task<bool> ReAsignToProjectAsync(ReAsignProjectDto reAsignProjectDto, CancellationToken cancellationToken)
+    public async Task<bool> ReAsignToProjectAsync(ReAsignProjectDto reAsignProjectDto, Guid currentUserId, CancellationToken cancellationToken)
     {
         var project = await _myDbContext.Projects.FirstOrDefaultAsync(p => p.ProjectId == reAsignProjectDto.ProjectID && !p.IsDeleted, cancellationToken);
 
@@ -246,8 +251,15 @@ public class ProjectServices : IProjectServices
         {
             throw new AppException(StatusCodes.Status400BadRequest, "Project is already assigned to this user.");
         }
+        var currentUser = await _myDbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserID == currentUserId && u.IsActive && !u.IsDeleted, cancellationToken);
+        if (currentUser == null)
+        {
+            throw new AppException(StatusCodes.Status403Forbidden, "User account is inactive or does not exist.");
+        }
+
         project.AssignedToUserId = reAsignProjectDto.AssignedToUserID;
         project.UpdatedAt = DateTime.UtcNow;
+        _activityLogService.Add(project.ProjectId, project.ProjectName, currentUser.UserID, currentUser.FullName, "ProjectReassigned", $"{currentUser.FullName} assigned project \"{project.ProjectName}\" to {newOwner.FullName}.", targetUserId: newOwner.UserID);
 
         await _myDbContext.SaveChangesAsync(cancellationToken);
         return true;
@@ -292,7 +304,18 @@ public async Task<bool> AssignDeveloperToProject(AssignDevelopersDto assignDevel
 
     var membersToRemove = existingMembers.Where(pm => !developerIds.Contains(pm.UserId)).ToList();
 
+    var removedIds = membersToRemove.Select(member => member.UserId).ToList();
+    var removedUsers = await _myDbContext.Users.AsNoTracking()
+        .Where(person => removedIds.Contains(person.UserID))
+        .Select(person => new { person.UserID, person.FullName })
+        .ToListAsync(cancellationToken);
+
     _myDbContext.ProjectMembers.RemoveRange(membersToRemove);
+
+    foreach (var removed in removedUsers)
+    {
+        _activityLogService.Add(project.ProjectId, project.ProjectName, currentUser.UserID, currentUser.FullName, "DeveloperRemoved", $"{currentUser.FullName} removed {removed.FullName} from project \"{project.ProjectName}\".", targetUserId: removed.UserID);
+    }
 
     foreach (var developer in developers)
     {
@@ -304,6 +327,7 @@ public async Task<bool> AssignDeveloperToProject(AssignDevelopersDto assignDevel
                 ProjectId = project.ProjectId,
                 UserId = developer.UserID
             });
+            _activityLogService.Add(project.ProjectId, project.ProjectName, currentUser.UserID, currentUser.FullName, "DeveloperAdded", $"{currentUser.FullName} added {developer.FullName} to project \"{project.ProjectName}\".", targetUserId: developer.UserID);
         }
     }
 

@@ -44,10 +44,12 @@ public class GitHubService : IGitHubService
 
     private readonly HttpClient _httpClient;
     private readonly MySqlDbContext _context;
+    private readonly IActivityLogService _activityLogService;
 
-    public GitHubService(HttpClient httpClient, MySqlDbContext context)
+    public GitHubService(HttpClient httpClient, MySqlDbContext context, IActivityLogService activityLogService)
     {
         _httpClient = httpClient;
+        _activityLogService = activityLogService;
         _context = context;
     }
 
@@ -122,7 +124,8 @@ public class GitHubService : IGitHubService
             throw new AppException(StatusCodes.Status400BadRequest, "Invalid GitHub repository.");
         }
 
-        var project = await GetProjectAsync(userId, request.ProjectId, membersCanAccess: false, cancellationToken);
+        var user = await GetActiveUserAsync(userId, cancellationToken);
+        var project = await GetProjectAsync(user, request.ProjectId, membersCanAccess: false, cancellationToken);
         var repo = await ReadGitHubAsync<GitHubRepositoryApi>(
             $"repos/{Uri.EscapeDataString(owner)}/{Uri.EscapeDataString(repositoryName)}",
             "GitHub repository not found or it is private.",
@@ -145,6 +148,7 @@ public class GitHubService : IGitHubService
         project.GitHubOwner = canonicalOwner;
         project.GitHubRepoName = canonicalName;
         project.UpdatedAt = DateTime.UtcNow;
+        _activityLogService.Add(project.ProjectId, project.ProjectName, user.UserID, user.FullName, "RepositoryLinked", $"{user.FullName} linked GitHub repository {canonicalOwner}/{canonicalName} to project \"{project.ProjectName}\".");
         await _context.SaveChangesAsync(cancellationToken);
 
         return ToRepositoryDto(project, repo.Description, repo.HtmlUrl);
@@ -167,10 +171,12 @@ public class GitHubService : IGitHubService
 
     public async Task<bool> UnlinkRepositoryAsync(Guid userId, Guid projectId, CancellationToken cancellationToken)
     {
-        var project = await GetProjectAsync(userId, projectId, membersCanAccess: false, cancellationToken);
+        var user = await GetActiveUserAsync(userId, cancellationToken);
+        var project = await GetProjectAsync(user, projectId, membersCanAccess: false, cancellationToken);
         project.GitHubOwner = null;
         project.GitHubRepoName = null;
         project.UpdatedAt = DateTime.UtcNow;
+        _activityLogService.Add(project.ProjectId, project.ProjectName, user.UserID, user.FullName, "RepositoryUnlinked", $"{user.FullName} unlinked the GitHub repository from project \"{project.ProjectName}\".");
         await _context.SaveChangesAsync(cancellationToken);
         return true;
     }
@@ -240,6 +246,7 @@ public class GitHubService : IGitHubService
             task.UpdatedAt = now;
         }
 
+        _activityLogService.Add(project.ProjectId, project.ProjectName, user.UserID, user.FullName, "PullRequestsSynced", $"{user.FullName} synced pull requests on project \"{project.ProjectName}\" ({created} created, {updated} updated).");
         await _context.SaveChangesAsync(cancellationToken);
         return new SyncPullRequestResultDto
         {

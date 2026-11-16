@@ -26,7 +26,7 @@ public static class MySqlConfiguration
         {
             var database = sp.GetRequiredService<DatabaseSettings>();
             options.UseMySQL(
-                BuildConnectionString(configuration, database),
+                BuildConnectionString(configuration, database, environment.IsDevelopment()),
                 mysql =>
                 {
                     mysql.CommandTimeout(database.CommandTimeoutSeconds);
@@ -51,10 +51,12 @@ public static class MySqlConfiguration
         return services;
     }
 
-    public static string BuildConnectionString(IConfiguration configuration, DatabaseSettings settings)
+    public static string BuildConnectionString(IConfiguration configuration, DatabaseSettings settings, bool isDevelopment)
     {
         var connectionString = configuration.GetConnectionString("MySqlConnection")
             ?? throw new InvalidOperationException("MySqlConnection is not configured.");
+
+        connectionString = connectionString.Replace("SslMode=None", "SslMode=Disabled", StringComparison.OrdinalIgnoreCase);
 
         var builder = new MySqlConnectionStringBuilder(connectionString);
         if (string.IsNullOrEmpty(builder.Password))
@@ -65,10 +67,27 @@ public static class MySqlConfiguration
                 "environment variable, to a complete connection string including Password.");
         }
 
+        if (!isDevelopment && IsLocalDatabaseServer(builder.Server))
+        {
+            throw new InvalidOperationException(
+                "Production cannot use a local MySQL server. Set ConnectionStrings__MySqlConnection " +
+                "to the hosting connection string.");
+        }
+
         if (connectionString.IndexOf("SslMode", StringComparison.OrdinalIgnoreCase) < 0)
         {
-            builder.SslMode = MySqlSslMode.Disabled;
-            builder.AllowPublicKeyRetrieval = true;
+            if (isDevelopment || IsPrivateHostingDatabase(builder.Server))
+            {
+                builder.SslMode = MySqlSslMode.Disabled;
+                if (isDevelopment)
+                {
+                    builder.AllowPublicKeyRetrieval = true;
+                }
+            }
+            else
+            {
+                builder.SslMode = MySqlSslMode.Required;
+            }
         }
 
         builder.Pooling = true;
@@ -81,6 +100,20 @@ public static class MySqlConfiguration
         builder.AllowUserVariables = true;
         builder.UseAffectedRows = true;
         return builder.ConnectionString;
+    }
+
+    private static bool IsLocalDatabaseServer(string server)
+    {
+        return server.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+            || server.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)
+            || server.Equals(".", StringComparison.OrdinalIgnoreCase)
+            || server.Equals("(local)", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsPrivateHostingDatabase(string server)
+    {
+        return server.EndsWith(".databaseasp.net", StringComparison.OrdinalIgnoreCase)
+            && server.IndexOf(".public.", StringComparison.OrdinalIgnoreCase) < 0;
     }
 }
 
@@ -325,7 +358,12 @@ public sealed class SlowQueryInterceptor : DbCommandInterceptor
         }
 
         var text = command.CommandText;
-        if (text.Length > 400)
+        if (text.Contains("password=", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("pwd=", StringComparison.OrdinalIgnoreCase))
+        {
+            text = "[redacted]";
+        }
+        else if (text.Length > 400)
         {
             text = text[..400];
         }

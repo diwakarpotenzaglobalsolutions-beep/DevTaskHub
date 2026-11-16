@@ -91,6 +91,7 @@ namespace DevTaskHubBackend.Controllers
             var result = await _authServices.GetProfileDetails(userId);
             return Ok(new
             {
+                
                 status = true,
                 message = "Get profile details successfull.",
                 data = result

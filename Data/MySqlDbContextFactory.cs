@@ -8,15 +8,18 @@ public class MySqlDbContextFactory : IDesignTimeDbContextFactory<MySqlDbContext>
 {
     public MySqlDbContext CreateDbContext(string[] args)
     {
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
+        var isDevelopment = string.Equals(environment, "Development", StringComparison.OrdinalIgnoreCase);
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json")
-            .AddUserSecrets<MySqlDbContextFactory>()
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile($"appsettings.{environment}.json", optional: true)
+            .AddUserSecrets<MySqlDbContextFactory>(optional: true)
             .AddEnvironmentVariables()
             .Build();
-        var settings = DatabaseSettings.From(configuration, isDevelopment: true);
+        var settings = DatabaseSettings.From(configuration, isDevelopment);
         var options = new DbContextOptionsBuilder<MySqlDbContext>()
-            .UseMySQL(MySqlConfiguration.BuildConnectionString(configuration, settings))
+            .UseMySQL(MySqlConfiguration.BuildConnectionString(configuration, settings, isDevelopment))
             .Options;
         return new MySqlDbContext(options);
     }
