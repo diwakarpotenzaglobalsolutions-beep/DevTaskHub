@@ -370,9 +370,7 @@ public async Task<List<AttendanceHistoryDto>> GetAllAttendanceAsync(Guid current
 
     private async Task<Dictionary<Guid, Attendance>> AttendanceForDateAsync(DateOnly date, CancellationToken cancellationToken)
     {
-        var attendance = await _mySqlDbContext.Attendances.AsNoTracking()
-            .Where(row => row.AttendanceDate == date)
-            .ToListAsync(cancellationToken);
+        var attendance = await _mySqlDbContext.Attendances.AsNoTracking().Where(row => row.AttendanceDate == date).ToListAsync(cancellationToken);
 
         return attendance.ToDictionary(row => row.UserId);
     }

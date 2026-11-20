@@ -23,6 +23,9 @@ public class MySqlDbContext : MyDbContext
         ConfigureTaskComments(modelBuilder);
         ConfigureActivityLogs(modelBuilder);
         ConfigureAttendances(modelBuilder);
+        ConfigureLeaveTypes(modelBuilder);
+        ConfigureEmployeeLeaveBalances(modelBuilder);
+        ConfigureLeaveRequests(modelBuilder);
         ConfigureAuditColumns(modelBuilder);
         UseUuid7Keys(modelBuilder);
         base.OnModelCreating(modelBuilder);
@@ -194,6 +197,52 @@ public class MySqlDbContext : MyDbContext
             .IsUnique()
             .HasDatabaseName("UX_Attendances_User_Date");
         entity.HasOne<User>().WithMany().HasForeignKey(attendance => attendance.UserId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureLeaveTypes(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<LeaveTypes>();
+        entity.HasKey(leaveType => leaveType.LeaveTypeId);
+        entity.Property(leaveType => leaveType.AnnualQuota).HasPrecision(10, 2);
+        entity.Property(leaveType => leaveType.IsActive).HasDefaultValue(true);
+        entity.Property(leaveType => leaveType.CreatedAt).HasColumnType("datetime(6)");
+        entity.Property(leaveType => leaveType.UpdatedAt).HasColumnType("datetime(6)");
+    }
+
+    private static void ConfigureEmployeeLeaveBalances(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<EmployeeLeaveBalances>();
+        entity.HasKey(balance => balance.EmployeeLeaveBalanceId);
+        entity.Property(balance => balance.AllocatedDays).HasPrecision(10, 2);
+        entity.Property(balance => balance.UsedDays).HasPrecision(10, 2);
+        entity.Property(balance => balance.CreatedAt).HasColumnType("datetime(6)");
+        entity.Property(balance => balance.UpdatedAt).HasColumnType("datetime(6)");
+        entity.HasIndex(balance => new { balance.UserId, balance.LeaveTypeId, balance.Year })
+            .IsUnique()
+            .HasDatabaseName("UX_EmployeeLeaveBalances_User_LeaveType_Year");
+        entity.HasOne(balance => balance.User).WithMany().HasForeignKey(balance => balance.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne(balance => balance.LeaveType).WithMany().HasForeignKey(balance => balance.LeaveTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureLeaveRequests(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<LeaveRequests>();
+        entity.HasKey(request => request.LeaveRequestId);
+        entity.Property(request => request.StartDate).HasConversion<DateOnlyConverter>().HasColumnType("date");
+        entity.Property(request => request.EndDate).HasConversion<DateOnlyConverter>().HasColumnType("date");
+        entity.Property(request => request.TotalDays).HasPrecision(10, 2);
+        entity.Property(request => request.Status).HasMaxLength(20).HasDefaultValue("Pending");
+        entity.Property(request => request.ReviewedAt).HasColumnType("datetime(6)");
+        entity.Property(request => request.CreatedAt).HasColumnType("datetime(6)");
+        entity.Property(request => request.UpdatedAt).HasColumnType("datetime(6)");
+        entity.HasOne(request => request.User).WithMany().HasForeignKey(request => request.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne(request => request.LeaveType).WithMany().HasForeignKey(request => request.LeaveTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+        entity.HasOne(request => request.ReviewedByUser).WithMany().HasForeignKey(request => request.ReviewedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureAuditColumns(ModelBuilder modelBuilder)

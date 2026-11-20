@@ -57,6 +57,9 @@ builder.Services.AddScoped<ITaskServices, TaskServices>();
 builder.Services.AddScoped<IDashboardServices, DashboardServices>();
 builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 builder.Services.AddScoped<IAttendanceServices, AttendanceServices>();
+builder.Services.AddScoped<ILeaveServices, LeaveServices>();
+builder.Services.AddScoped<ILeaveAllocationServices, LeaveAllocationServices>();
+builder.Services.AddScoped<ILeaveApplicationServices, LeaveApplicationServices>();
 
 var token = builder.Configuration["AppSettings:Token"]
     ?? throw new InvalidOperationException(

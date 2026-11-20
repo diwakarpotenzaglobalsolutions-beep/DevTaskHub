@@ -36,7 +36,7 @@ namespace DevTaskHubBackend.Migrations
                         .IsUnique()
                         .HasDatabaseName("UX_Roles_RoleName");
 
-                    b.ToTable("Roles", null, t =>
+                    b.ToTable("Roles", t =>
                         {
                             t.HasCheckConstraint("CK_Roles_RoleName", "`RoleName` IN ('Admin', 'Project Manager', 'Developer', 'HR Management')");
                         });
@@ -125,7 +125,7 @@ namespace DevTaskHubBackend.Migrations
                     b.HasIndex("UserId", "CreatedAt")
                         .HasDatabaseName("IX_ActivityLogs_User_Created");
 
-                    b.ToTable("ActivityLogs", (string)null);
+                    b.ToTable("ActivityLogs");
                 });
 
             modelBuilder.Entity("DevTaskHubBackend.Entities.Attendance", b =>
@@ -174,7 +174,145 @@ namespace DevTaskHubBackend.Migrations
                         .IsUnique()
                         .HasDatabaseName("UX_Attendances_User_Date");
 
-                    b.ToTable("Attendances", (string)null);
+                    b.ToTable("Attendances");
+                });
+
+            modelBuilder.Entity("DevTaskHubBackend.Entities.EmployeeLeaveBalances", b =>
+                {
+                    b.Property<Guid>("EmployeeLeaveBalanceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("AllocatedDays")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("LeaveTypeId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal>("UsedDays")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("EmployeeLeaveBalanceId");
+
+                    b.HasIndex("LeaveTypeId");
+
+                    b.HasIndex("UserId", "LeaveTypeId", "Year")
+                        .IsUnique()
+                        .HasDatabaseName("UX_EmployeeLeaveBalances_User_LeaveType_Year");
+
+                    b.ToTable("EmployeeLeaveBalances");
+                });
+
+            modelBuilder.Entity("DevTaskHubBackend.Entities.LeaveRequests", b =>
+                {
+                    b.Property<Guid>("LeaveRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("LeaveTypeId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<decimal>("TotalDays")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("LeaveRequestId");
+
+                    b.HasIndex("LeaveTypeId");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("LeaveRequests");
+                });
+
+            modelBuilder.Entity("DevTaskHubBackend.Entities.LeaveTypes", b =>
+                {
+                    b.Property<Guid>("LeaveTypeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("AllowHalfDay")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<decimal?>("AnnualQuota")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("LeaveTypeId");
+
+                    b.ToTable("LeaveTypes");
                 });
 
             modelBuilder.Entity("DevTaskHubBackend.Entities.ProjectMember", b =>
@@ -206,7 +344,7 @@ namespace DevTaskHubBackend.Migrations
                     b.HasIndex("UserId", "ProjectId")
                         .HasDatabaseName("IX_ProjectMembers_User_Project");
 
-                    b.ToTable("ProjectMembers", (string)null);
+                    b.ToTable("ProjectMembers");
                 });
 
             modelBuilder.Entity("DevTaskHubBackend.Entities.Projects", b =>
@@ -281,7 +419,7 @@ namespace DevTaskHubBackend.Migrations
                     b.HasIndex("IsDeleted", "Status", "CreatedAt")
                         .HasDatabaseName("IX_Projects_Status_CreatedAt");
 
-                    b.ToTable("Projects", null, t =>
+                    b.ToTable("Projects", t =>
                         {
                             t.HasCheckConstraint("CK_Projects_Status", "`Status` IN ('Active', 'OnHold', 'Completed', 'Archived')");
                         });
@@ -325,7 +463,7 @@ namespace DevTaskHubBackend.Migrations
                     b.HasIndex("TaskId", "CreatedAt")
                         .HasDatabaseName("IX_TaskComments_Task_Created");
 
-                    b.ToTable("TaskComments", (string)null);
+                    b.ToTable("TaskComments");
                 });
 
             modelBuilder.Entity("DevTaskHubBackend.Entities.Tasks", b =>
@@ -423,7 +561,7 @@ namespace DevTaskHubBackend.Migrations
                     b.HasIndex("ProjectId", "IsDeleted", "Status", "DueDate")
                         .HasDatabaseName("IX_Tasks_Project_Board");
 
-                    b.ToTable("Tasks", null, t =>
+                    b.ToTable("Tasks", t =>
                         {
                             t.HasCheckConstraint("CK_Tasks_GitHubPRStatus", "(`GitHubPRStatus` IS NULL OR `GitHubPRStatus` IN ('Open', 'Draft', 'Merged', 'Closed'))");
 
@@ -539,7 +677,7 @@ namespace DevTaskHubBackend.Migrations
                     b.HasIndex("RoleId", "IsActive", "IsDeleted")
                         .HasDatabaseName("IX_Users_Role_Active");
 
-                    b.ToTable("Users", null, t =>
+                    b.ToTable("Users", t =>
                         {
                             t.HasCheckConstraint("CK_Users_ManagerNotSelf", "`ManagerId` IS NULL OR `ManagerId` <> `UserID`");
                         });
@@ -572,6 +710,51 @@ namespace DevTaskHubBackend.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("DevTaskHubBackend.Entities.EmployeeLeaveBalances", b =>
+                {
+                    b.HasOne("DevTaskHubBackend.Entities.LeaveTypes", "LeaveType")
+                        .WithMany()
+                        .HasForeignKey("LeaveTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DevTaskHubBackend.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("LeaveType");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DevTaskHubBackend.Entities.LeaveRequests", b =>
+                {
+                    b.HasOne("DevTaskHubBackend.Entities.LeaveTypes", "LeaveType")
+                        .WithMany()
+                        .HasForeignKey("LeaveTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DevTaskHubBackend.Entities.User", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DevTaskHubBackend.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("LeaveType");
+
+                    b.Navigation("ReviewedByUser");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("DevTaskHubBackend.Entities.ProjectMember", b =>
