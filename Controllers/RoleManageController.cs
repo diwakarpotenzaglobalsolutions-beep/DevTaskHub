@@ -19,7 +19,7 @@ namespace DevTaskHubBackend.Controllers
         {
             _roleManageServices=roleManageServices;
         }
-        [RoleAuthorize(UserRole.Admin)]
+        [RoleAuthorize(UserRole.Admin,UserRole.Hr)]
         [HttpGet("Get-AllUser")]
         public async Task<IActionResult> GetAllUserAsync()
         {
@@ -32,7 +32,7 @@ namespace DevTaskHubBackend.Controllers
                 data=result
             });
         }
-        [RoleAuthorize(UserRole.Admin)]
+        [RoleAuthorize(UserRole.Admin,UserRole.Hr)]
         [HttpPost("Role-Assign")]
         public async Task<IActionResult> AssignRoleByUser(RoleAssignDto roleAssignDto)
         {
@@ -46,7 +46,7 @@ namespace DevTaskHubBackend.Controllers
             });
         }
 
-        [RoleAuthorize(UserRole.Admin)]
+        [RoleAuthorize(UserRole.Admin,UserRole.Hr)]
         [HttpGet("Get-AllRole")]
         public async Task<IActionResult> GetAllRoleList()
         {

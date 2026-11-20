@@ -23,4 +23,6 @@ public class MyDbContext:DbContext
         public DbSet<TaskComment> TaskComments { get; set; }
 
         public DbSet<ActivityLog> ActivityLogs { get; set; }
+
+        public DbSet<Attendance> Attendances { get; set; }
 }

@@ -91,7 +91,7 @@ namespace DevTaskHubBackend.Controllers
             var result = await _authServices.GetProfileDetails(userId);
             return Ok(new
             {
-                
+
                 status = true,
                 message = "Get profile details successfull.",
                 data = result
@@ -143,6 +143,7 @@ namespace DevTaskHubBackend.Controllers
             });
 
         }
+        
         [HttpPost("Assign-Developer")]
         [RoleAuthorize(UserRole.Admin)]
         public async Task<IActionResult> AssignDeveloper([FromBody] AssignDevloperDto request, CancellationToken cancellationToken)

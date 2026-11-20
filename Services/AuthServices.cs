@@ -151,18 +151,11 @@ public class AuthServices : IAuthServices
         LoginDto loginDto,
         CancellationToken cancellationToken)
     {
-        var user = await _context.Users
-            .FirstOrDefaultAsync(
-                u => u.Email == loginDto.Email &&
-                     u.IsActive &&
-                     !u.IsDeleted,
-                cancellationToken);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == loginDto.Email &&u.IsActive &&!u.IsDeleted,cancellationToken);
 
         if (user == null)
         {
-            throw new AppException(
-                StatusCodes.Status401Unauthorized,
-                "Invalid email or password.");
+            throw new AppException(StatusCodes.Status401Unauthorized,"Invalid email or password.");
         }
 
         if (new PasswordHasher<User>().VerifyHashedPassword(
@@ -177,7 +170,23 @@ public class AuthServices : IAuthServices
 
         string? managerName = "";
 
-        if (user.RoleId != UserRole.Admin.ToId())
+        if (user.RoleId == UserRole.Hr.ToId())
+        {
+            var admin = await _context.Users
+                .Where(u => u.RoleId == UserRole.Admin.ToId() && u.IsActive && !u.IsDeleted)
+                .OrderBy(u => u.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (admin != null && user.ManagerId != admin.UserID)
+            {
+                user.ManagerId = admin.UserID;
+                user.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            managerName = admin?.FullName ?? "";
+        }
+        else if (user.RoleId != UserRole.Admin.ToId())
         {
             Guid? managerId = user.ManagerId;
             if (managerId.HasValue)

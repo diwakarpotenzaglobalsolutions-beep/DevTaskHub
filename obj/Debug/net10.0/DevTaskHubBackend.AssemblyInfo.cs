@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DevTaskHubBackend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f3f3b5a54bd086086568b01026be1f8d07929a5c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d168f3eb0690b04ee216183c8c2805bdbaabfefd")]
 [assembly: System.Reflection.AssemblyProductAttribute("DevTaskHubBackend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DevTaskHubBackend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

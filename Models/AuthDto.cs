@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using DevTaskHubBackend.Entities;
 
 namespace DevTaskHubBackend.Models;
@@ -91,6 +92,9 @@ public class ProfileResponseDto
     public bool IsActive { get; set; } = true;
     public string? GitHubUserName { get; set; }
     public string? GitHubAvatarUrl { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AttendanceStatus { get; set; }
 }
 
 public class ActiveAndDeActiveUserDto

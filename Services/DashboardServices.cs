@@ -35,10 +35,8 @@ public class DashboardServices : IDashboardServices
         bool isManager = currentUser.RoleId == UserRole.Manager.ToId();
         bool isDeveloper = currentUser.RoleId == UserRole.Developer.ToId();
 
-        // Project Query
-        var projectQuery = _mySqlDbContext.Projects
-            .AsNoTracking()
-            .Where(p => !p.IsDeleted);
+       
+        var projectQuery = _mySqlDbContext.Projects.AsNoTracking().Where(p => !p.IsDeleted);
 
         if (isManager)
         {
@@ -53,7 +51,7 @@ public class DashboardServices : IDashboardServices
             throw new AppException(403, "Access denied.");
         }
 
-        // Task Query
+        
         var taskQuery = _mySqlDbContext.Tasks.AsNoTracking().Where(t => projectQuery.Any(p => p.ProjectId == t.ProjectId));
 
         if (isDeveloper)
@@ -72,7 +70,7 @@ public class DashboardServices : IDashboardServices
             })
             .ToListAsync(cancellationToken);
 
-        // Dashboard Response
+        
         var dashboard = new DashboardResponseDto
         {
             TotalProjects = totalProjects,
@@ -89,7 +87,7 @@ public class DashboardServices : IDashboardServices
             BlockedTasks = taskCounts.Where(x => x.Status == "Blocked").Sum(x => x.Count)
         };
 
-        // Admin Only: User Statistics
+       
         if (isAdmin)
         {
             var userCounts = await _mySqlDbContext.Users.AsNoTracking().Where(u => !u.IsDeleted).GroupBy(u => 1).Select(g => new
@@ -98,23 +96,17 @@ public class DashboardServices : IDashboardServices
                 ActiveUsers = g.Count(u => u.IsActive),
                 InactiveUsers = g.Count(u => !u.IsActive),
 
-                TotalManagers = g.Count(u =>
-                    u.RoleId == UserRole.Manager.ToId()),
+                TotalManagers = g.Count(u =>u.RoleId == UserRole.Manager.ToId()),
 
-                ActiveManagers = g.Count(u =>
-                    u.RoleId == UserRole.Manager.ToId() && u.IsActive),
+                ActiveManagers = g.Count(u => u.RoleId == UserRole.Manager.ToId() && u.IsActive),
 
-                InactiveManagers = g.Count(u =>
-                    u.RoleId == UserRole.Manager.ToId() && !u.IsActive),
+                InactiveManagers = g.Count(u =>u.RoleId == UserRole.Manager.ToId() && !u.IsActive),
 
-                TotalDevelopers = g.Count(u =>
-                    u.RoleId == UserRole.Developer.ToId()),
+                TotalDevelopers = g.Count(u =>u.RoleId == UserRole.Developer.ToId()),
 
-                ActiveDevelopers = g.Count(u =>
-                    u.RoleId == UserRole.Developer.ToId() && u.IsActive),
+                ActiveDevelopers = g.Count(u =>u.RoleId == UserRole.Developer.ToId() && u.IsActive),
 
-                InactiveDevelopers = g.Count(u =>
-                    u.RoleId == UserRole.Developer.ToId() && !u.IsActive)
+                InactiveDevelopers = g.Count(u =>u.RoleId == UserRole.Developer.ToId() && !u.IsActive)
             })
                 .FirstOrDefaultAsync(cancellationToken);
 

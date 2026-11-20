@@ -22,6 +22,7 @@ public class MySqlDbContext : MyDbContext
         ConfigureProjectMembers(modelBuilder);
         ConfigureTaskComments(modelBuilder);
         ConfigureActivityLogs(modelBuilder);
+        ConfigureAttendances(modelBuilder);
         ConfigureAuditColumns(modelBuilder);
         UseUuid7Keys(modelBuilder);
         base.OnModelCreating(modelBuilder);
@@ -40,7 +41,8 @@ public class MySqlDbContext : MyDbContext
         entity.HasData(
             new { RoleId = UserRole.Admin.ToId(), RoleName = UserRole.Admin.ToName() },
             new { RoleId = UserRole.Manager.ToId(), RoleName = UserRole.Manager.ToName() },
-            new { RoleId = UserRole.Developer.ToId(), RoleName = UserRole.Developer.ToName() });
+            new { RoleId = UserRole.Developer.ToId(), RoleName = UserRole.Developer.ToName() },
+            new { RoleId = UserRole.Hr.ToId(), RoleName = UserRole.Hr.ToName() });
     }
 
     private static void ConfigureUsers(ModelBuilder modelBuilder)
@@ -173,6 +175,25 @@ public class MySqlDbContext : MyDbContext
         entity.HasOne<Projects>().WithMany().HasForeignKey(log => log.ProjectId).OnDelete(DeleteBehavior.Restrict);
         entity.HasOne<User>().WithMany().HasForeignKey(log => log.UserId).OnDelete(DeleteBehavior.Restrict);
         entity.HasOne<User>().WithMany().HasForeignKey(log => log.TargetUserId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureAttendances(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<Attendance>();
+        entity.Property(attendance => attendance.AttendanceDate)
+            .HasConversion<DateOnlyConverter>()
+            .HasColumnType("date");
+        entity.Property(attendance => attendance.CheckInTime).HasColumnType("datetime(6)");
+        entity.Property(attendance => attendance.CheckOutTime).HasColumnType("datetime(6)");
+        entity.Property(attendance => attendance.WorkingMinutes).HasDefaultValue(0);
+        entity.Property(attendance => attendance.Status).HasMaxLength(20).IsRequired().HasDefaultValue("Present");
+        entity.Property(attendance => attendance.Remarks).HasMaxLength(500);
+        entity.Property(attendance => attendance.CreatedAt).HasColumnType("datetime(6)");
+        entity.Property(attendance => attendance.UpdatedAt).HasColumnType("datetime(6)");
+        entity.HasIndex(attendance => new { attendance.UserId, attendance.AttendanceDate })
+            .IsUnique()
+            .HasDatabaseName("UX_Attendances_User_Date");
+        entity.HasOne<User>().WithMany().HasForeignKey(attendance => attendance.UserId).OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureAuditColumns(ModelBuilder modelBuilder)

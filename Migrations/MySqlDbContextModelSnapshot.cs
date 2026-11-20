@@ -36,9 +36,9 @@ namespace DevTaskHubBackend.Migrations
                         .IsUnique()
                         .HasDatabaseName("UX_Roles_RoleName");
 
-                    b.ToTable("Roles", t =>
+                    b.ToTable("Roles", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Roles_RoleName", "`RoleName` IN ('Admin', 'Project Manager', 'Developer')");
+                            t.HasCheckConstraint("CK_Roles_RoleName", "`RoleName` IN ('Admin', 'Project Manager', 'Developer', 'HR Management')");
                         });
 
                     b.HasData(
@@ -56,6 +56,11 @@ namespace DevTaskHubBackend.Migrations
                         {
                             RoleId = new Guid("d17a6e83-5c42-4b19-a0f6-9b3d8e2c1a47"),
                             RoleName = "Developer"
+                        },
+                        new
+                        {
+                            RoleId = new Guid("b6d4e8a2-1f70-4c58-9a3e-5d8c2b7f0e16"),
+                            RoleName = "HR Management"
                         });
                 });
 
@@ -120,7 +125,56 @@ namespace DevTaskHubBackend.Migrations
                     b.HasIndex("UserId", "CreatedAt")
                         .HasDatabaseName("IX_ActivityLogs_User_Created");
 
-                    b.ToTable("ActivityLogs");
+                    b.ToTable("ActivityLogs", (string)null);
+                });
+
+            modelBuilder.Entity("DevTaskHubBackend.Entities.Attendance", b =>
+                {
+                    b.Property<Guid>("AttendanceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("AttendanceDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("CheckInTime")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("CheckOutTime")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasDefaultValue("Present");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("WorkingMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.HasKey("AttendanceId");
+
+                    b.HasIndex("UserId", "AttendanceDate")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Attendances_User_Date");
+
+                    b.ToTable("Attendances", (string)null);
                 });
 
             modelBuilder.Entity("DevTaskHubBackend.Entities.ProjectMember", b =>
@@ -152,7 +206,7 @@ namespace DevTaskHubBackend.Migrations
                     b.HasIndex("UserId", "ProjectId")
                         .HasDatabaseName("IX_ProjectMembers_User_Project");
 
-                    b.ToTable("ProjectMembers");
+                    b.ToTable("ProjectMembers", (string)null);
                 });
 
             modelBuilder.Entity("DevTaskHubBackend.Entities.Projects", b =>
@@ -227,7 +281,7 @@ namespace DevTaskHubBackend.Migrations
                     b.HasIndex("IsDeleted", "Status", "CreatedAt")
                         .HasDatabaseName("IX_Projects_Status_CreatedAt");
 
-                    b.ToTable("Projects", t =>
+                    b.ToTable("Projects", null, t =>
                         {
                             t.HasCheckConstraint("CK_Projects_Status", "`Status` IN ('Active', 'OnHold', 'Completed', 'Archived')");
                         });
@@ -271,7 +325,7 @@ namespace DevTaskHubBackend.Migrations
                     b.HasIndex("TaskId", "CreatedAt")
                         .HasDatabaseName("IX_TaskComments_Task_Created");
 
-                    b.ToTable("TaskComments");
+                    b.ToTable("TaskComments", (string)null);
                 });
 
             modelBuilder.Entity("DevTaskHubBackend.Entities.Tasks", b =>
@@ -369,7 +423,7 @@ namespace DevTaskHubBackend.Migrations
                     b.HasIndex("ProjectId", "IsDeleted", "Status", "DueDate")
                         .HasDatabaseName("IX_Tasks_Project_Board");
 
-                    b.ToTable("Tasks", t =>
+                    b.ToTable("Tasks", null, t =>
                         {
                             t.HasCheckConstraint("CK_Tasks_GitHubPRStatus", "(`GitHubPRStatus` IS NULL OR `GitHubPRStatus` IN ('Open', 'Draft', 'Merged', 'Closed'))");
 
@@ -485,7 +539,7 @@ namespace DevTaskHubBackend.Migrations
                     b.HasIndex("RoleId", "IsActive", "IsDeleted")
                         .HasDatabaseName("IX_Users_Role_Active");
 
-                    b.ToTable("Users", t =>
+                    b.ToTable("Users", null, t =>
                         {
                             t.HasCheckConstraint("CK_Users_ManagerNotSelf", "`ManagerId` IS NULL OR `ManagerId` <> `UserID`");
                         });
@@ -504,6 +558,15 @@ namespace DevTaskHubBackend.Migrations
                         .HasForeignKey("TargetUserId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("DevTaskHubBackend.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DevTaskHubBackend.Entities.Attendance", b =>
+                {
                     b.HasOne("DevTaskHubBackend.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")

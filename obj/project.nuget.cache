@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "idecwbYpSb8=",
+  "dgSpecHash": "8a7BRoFU9Co=",
   "success": true,
   "projectFilePath": "/Users/apple/Desktop/DevTaskCRM/DevTaskHub/DevTaskHubBackend.csproj",
   "expectedPackageFiles": [
@@ -72,8 +72,7 @@
     "/Users/apple/.nuget/packages/system.security.cryptography.protecteddata/10.0.8/system.security.cryptography.protecteddata.10.0.8.nupkg.sha512",
     "/Users/apple/.nuget/packages/system.security.permissions/10.0.8/system.security.permissions.10.0.8.nupkg.sha512",
     "/Users/apple/.nuget/packages/system.windows.extensions/10.0.8/system.windows.extensions.10.0.8.nupkg.sha512",
-    "/Users/apple/.nuget/packages/zstdsharp.port/0.8.8/zstdsharp.port.0.8.8.nupkg.sha512",
-    "/Users/apple/.nuget/packages/microsoft.netcore.app.host.win-x64/10.0.12/microsoft.netcore.app.host.win-x64.10.0.12.nupkg.sha512"
+    "/Users/apple/.nuget/packages/zstdsharp.port/0.8.8/zstdsharp.port.0.8.8.nupkg.sha512"
   ],
   "logs": []
 }

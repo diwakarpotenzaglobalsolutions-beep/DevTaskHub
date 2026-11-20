@@ -26,6 +26,13 @@ public class RoleManageServices : IRoleManageServices
 
     public async Task<List<ProfileResponseDto>> GetAllUserAsync(CancellationToken cancellationToken)
     {
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata")));
+        var checkedInUserIds = await _context.Attendances.AsNoTracking()
+            .Where(attendance => attendance.AttendanceDate == today && attendance.CheckInTime != null)
+            .Select(attendance => attendance.UserId)
+            .ToListAsync(cancellationToken);
+        var checkedInUsers = checkedInUserIds.ToHashSet();
+
         var users = await _context.Users.AsNoTracking().Where(u => !u.IsDeleted).Select(u => new
         {
             u.UserID,
@@ -47,7 +54,8 @@ public class RoleManageServices : IRoleManageServices
             Role = RoleHelper.GetRoleName(user.RoleId),
             IsActive = user.IsActive,
             GitHubUserName = user.GitHubUserName,
-            GitHubAvatarUrl = user.GitHubAvatarUrl
+            GitHubAvatarUrl = user.GitHubAvatarUrl,
+            AttendanceStatus = checkedInUsers.Contains(user.UserID) ? "Present" : "Absent"
         }).ToList();
     }
 
@@ -62,11 +70,7 @@ public class RoleManageServices : IRoleManageServices
         }
 
         var validRoleIds = new[]
-        {
-        UserRole.Admin.ToId(),
-        UserRole.Manager.ToId(),
-        UserRole.Developer.ToId()
-    };
+        {UserRole.Admin.ToId(),UserRole.Manager.ToId(),UserRole.Developer.ToId(),UserRole.Hr.ToId()};
 
         if (!validRoleIds.Contains(roleAssignDto.RoleID))
         {
@@ -79,6 +83,26 @@ public class RoleManageServices : IRoleManageServices
             throw new AppException(StatusCodes.Status400BadRequest, "This role is already assigned to the user.");
         }
 
+        if (roleAssignDto.RoleID == UserRole.Hr.ToId())
+        {
+            var adminId = await _context.Users.AsNoTracking()
+                .Where(u => u.UserID != user.UserID && u.RoleId == UserRole.Admin.ToId() && u.IsActive && !u.IsDeleted)
+                .OrderBy(u => u.CreatedAt)
+                .Select(u => (Guid?)u.UserID)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (adminId == null)
+            {
+                throw new AppException(StatusCodes.Status400BadRequest, "An Admin is required before assigning HR Management.");
+            }
+
+            user.ManagerId = adminId;
+        }
+        else if (user.RoleId == UserRole.Hr.ToId())
+        {
+            user.ManagerId = null;
+        }
+
         user.RoleId = roleAssignDto.RoleID;
         user.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
@@ -86,13 +110,9 @@ public class RoleManageServices : IRoleManageServices
         return true;
     }
 
- public async Task<List<RoleListDto>> GetAllRoleListAsync(
-    CancellationToken cancellationToken)
+ public async Task<List<RoleListDto>> GetAllRoleListAsync(CancellationToken cancellationToken)
 {
-    return await _context.Roles
-        .AsNoTracking()
-        .OrderBy(r => r.RoleName)
-        .Select(role => new RoleListDto
+    return await _context.Roles.AsNoTracking().OrderBy(r => r.RoleName).Select(role => new RoleListDto
         {
             RoleID = role.RoleId,
             RoleName = role.RoleName

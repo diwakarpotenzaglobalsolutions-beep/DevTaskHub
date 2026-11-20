@@ -20,6 +20,9 @@ public static class RoleHelper
             var id when id == UserRoles.DeveloperId =>
                 UserRole.Developer.ToName(),
 
+            var id when id == UserRoles.HrId =>
+                UserRole.Hr.ToName(),
+
             _ => throw new ArgumentException(
                 "Invalid RoleId.",
                 nameof(roleId))

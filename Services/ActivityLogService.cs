@@ -97,11 +97,7 @@ public class ActivityLogService : IActivityLogService
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
-        var items = await query
-            .OrderByDescending(log => log.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(log => new ActivityLogDto
+        var items = await query.OrderByDescending(log => log.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).Select(log => new ActivityLogDto
             {
                 ActivityLogId = log.ActivityLogId,
                 ProjectId = log.ProjectId,
@@ -113,8 +109,7 @@ public class ActivityLogService : IActivityLogService
                 Action = log.Action,
                 Message = log.Message,
                 CreatedAt = log.CreatedAt
-            })
-            .ToListAsync(cancellationToken);
+            }).ToListAsync(cancellationToken);
 
         return new ActivityLogListDto
         {
